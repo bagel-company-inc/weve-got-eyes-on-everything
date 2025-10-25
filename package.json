@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "vite",
-    "start-local": "vite --config ../../vite.config.local.mjs"
+    "start": "vite"
   },
   "dependencies": {
     "@deck.gl-community/editable-layers": "^9.1.0",
+    "@deck.gl-community/layers": "^9.1.0-beta.2",
     "@deck.gl-community/react": "^9.1.0",
     "@deck.gl/core": "^9.1.12",
     "@deck.gl/extensions": "^9.1.0",
@@ -16,6 +16,7 @@
     "@deck.gl/layers": "^9.1.0",
     "@deck.gl/mesh-layers": "^9.1.0",
     "@deck.gl/react": "^9.1.0",
+    "@deck.gl/widgets": "^9.1.0",
     "@loaders.gl/core": "^4.2.0",
     "@loaders.gl/wkt": "^4.2.0",
     "@maphubs/tokml": "^0.6.1",

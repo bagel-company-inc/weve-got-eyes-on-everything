@@ -1,7 +1,3 @@
-// deck.gl-community
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
 import React, { useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import { ViewMode, EditableGeoJsonLayer } from '@deck.gl-community/editable-layers';
