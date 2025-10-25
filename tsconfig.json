@@ -1,57 +1,8 @@
 {
-  "ts-node": {
-    "include": [
-      "modules",
-      "test/modules"
-    ],
-    // It is faster to skip typechecking. Remove if you want ts-node to do typechecking.
-    "transpileOnly": true
-  },
   "compilerOptions": {
-    "target": "es2022",
-    "module": "es2022",
+    "target": "es2020",
     "jsx": "react",
-    // "strict": true,
-    // "noImplicitAny": false,
-    "allowJs": true,
-    "checkJs": false,
     "moduleResolution": "node",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@deck.gl-community/editable-layers": ["modules/editable-layers/src"],
-    },
-    "typeRoots": ["./node_modules/@types"],
-    "plugins": [
-      {
-        "transform": "@vis.gl/ts-plugins/ts-transform-version-inline"
-      },
-      {
-        "transform": "@vis.gl/ts-plugins/ts-transform-inline-webgl-constants"
-      },
-      {
-        "transform": "@vis.gl/ts-plugins/ts-transform-remove-glsl-comments"
-      },
-      {
-        "transform": "@vis.gl/ts-plugins/ts-transform-append-extension",
-        "extensions": [".js"],
-        "after": true
-      },
-      {
-        "transform": "@vis.gl/ts-plugins/ts-transform-append-extension",
-        "extensions": [".js"],
-        "afterDeclarations": true
-      }
-    ],
-    // TODO
-    "strict": false,
-    "noImplicitAny": false
-  },
-  "exclude": [
-    "**/node_modules",
-    "**/dist"
-  ]
+    "allowSyntheticDefaultImports": true
+  }
 }
