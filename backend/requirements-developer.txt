@@ -1,0 +1,6 @@
+-r requirements.txt
+
+mypy
+pandas-stubs
+types-geopandas
+types-Flask-Cors
