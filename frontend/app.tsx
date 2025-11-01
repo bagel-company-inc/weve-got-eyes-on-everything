@@ -1,9 +1,36 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Map } from "react-map-gl/maplibre";
 import { WebMercatorViewport } from "@deck.gl/core";
 import { DeckGL } from "@deck.gl/react";
 import { GeoJsonLayer } from "@deck.gl/layers";
+
+// Throttle: limit function calls to once per interval
+function throttle<T extends (...args: any[]) => void>(
+  func: T,
+  limit: number
+): T {
+  let inThrottle: boolean;
+  return function (this: any, ...args: any[]) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  } as T;
+}
+
+// Debounce: delay function until no calls for delay ms
+function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): T {
+  let timer: NodeJS.Timeout;
+  return function (this: any, ...args: any[]) {
+    clearTimeout(timer);
+    timer = setTimeout(() => func.apply(this, args), delay);
+  } as T;
+}
 
 const MAP_STYLE =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
@@ -55,11 +82,19 @@ export default function App() {
     }
   }
 
+  // Throttled fetch for continuous panning
+  const throttledFetch = useCallback(throttle(fetchVisibleData, 1000), []);
+
+  // Debounced fetch for final "stop" fetch
+  const debouncedFetch = useCallback(debounce(fetchVisibleData, 200), []);
+
   const handleViewChange = ({ viewState: vs }: any) => {
     setViewState(vs);
-    fetchVisibleData(vs);
+    throttledFetch(vs);
+    debouncedFetch(vs);
   };
 
+  // Initial fetch
   useEffect(() => {
     fetchVisibleData(viewState);
   }, []);

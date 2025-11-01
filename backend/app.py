@@ -6,6 +6,7 @@ from flask_cors import CORS, cross_origin
 
 from pandas import read_csv
 from geopandas import GeoDataFrame, GeoSeries
+from shapely import box
 
 
 app = Flask(__name__)
@@ -16,6 +17,7 @@ def load_csv_to_gdf(path: str) -> GeoDataFrame:
     df = read_csv(path, index_col=0)
     df["geometry"] = GeoSeries.from_wkt(df.geometry_4326, crs="EPSG:4326")
     gdf = GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+    gdf = gdf.replace({float("nan"): None})
     return gdf
 
 
@@ -36,7 +38,7 @@ class Bounds(NamedTuple):
 
 def find_geometry_within_bounds(gdf: GeoDataFrame, gbounds: Bounds) -> GeoDataFrame:
     found = gdf.sindex.intersection(gbounds)
-    return gdf.loc[found]
+    return gdf.iloc[found]
 
 
 def convert_geodataframe_row_to_geojson(row: dict[str, Any]) -> dict[str, Any]:
@@ -61,7 +63,8 @@ def get_pipes() -> Response:
 
     raw_rows: list[dict[str, Any]] = geometry.to_dict(orient="records")  # type: ignore[assignment]
     features: list[dict[str, Any]] = [convert_geodataframe_row_to_geojson(row) for row in raw_rows]
-    return app.response_class((dumps({"type": "FeatureCollection", "features": features}), "\n"))
+    json_str: str = dumps({"type": "FeatureCollection", "features": features})
+    return app.response_class((json_str, "\n"))
 
 
 if __name__ == "__main__":
