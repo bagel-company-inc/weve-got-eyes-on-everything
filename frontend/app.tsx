@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import { Map } from "react-map-gl/maplibre";
 import { WebMercatorViewport } from "@deck.gl/core";
@@ -62,6 +68,7 @@ export default function App() {
     longitude: 174.07,
     zoom: 14,
   });
+  const currentAbortController = useRef<AbortController | null>(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -69,9 +76,17 @@ export default function App() {
     setLoadingGeoJson(true);
     const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(vs);
 
+    // Cancel any ongoing request
+    if (currentAbortController.current) {
+      currentAbortController.current.abort();
+    }
+    const controller = new AbortController();
+    currentAbortController.current = controller;
+
     try {
       const res = await fetch(
-        `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}`
+        `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}`,
+        { signal: controller.signal }
       );
       const data = await res.json();
       setGeoJsonData(data);

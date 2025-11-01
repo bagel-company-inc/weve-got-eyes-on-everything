@@ -1,5 +1,5 @@
 import os
-from json import dumps
+import msgspec
 from typing import Any, NamedTuple, Self
 
 from flask import Flask, request, Response
@@ -43,7 +43,6 @@ class Bounds(NamedTuple):
     def overfit(self, percent_overfit: float = 40) -> "Bounds":
         dx: float = self.max_x - self.min_x
         dy: float = self.max_y - self.min_y
-        print(dx)
         return Bounds(
             self.min_x - dx * percent_overfit / 200,
             self.min_y - dy * percent_overfit / 200,
@@ -79,13 +78,26 @@ def convert_geodataframe_row_to_geojson(
     }
 
 
-def dataframe_to_dict_records(df: GeoDataFrame) -> list[dict[str, Any]]:
-    """
-    Faster version of df.to_dict(orient="records")
-    Copied from pandas.core.methods.to_dict, without data type conversion
-    """
-    columns = df.columns.tolist()
-    return [dict(zip(columns, t)) for t in df.itertuples(index=False, name=None)]
+def dataframe_to_geojson_features(
+    df: GeoDataFrame,
+    coordinates: NDArray[np.float64],
+    coordinate_indices: NDArray[np.int64],
+    coordinate_lengths: NDArray[np.int64],
+) -> list[dict[str, Any]]:
+    columns_to_index: dict[str, int] = {column: i for i, column in enumerate(df.columns)}
+    return [
+        {
+            "type": "Feature",
+            "geometry": get_geo_interface(
+                row[columns_to_index["geometry"]],
+                coordinates[coordinate_indices[i] : coordinate_indices[i] + coordinate_lengths[i]],
+            ),
+            "properties": {
+                "name": row[columns_to_index["name"]],
+            },
+        }
+        for i, row in enumerate(df.itertuples(index=False, name=None))
+    ]
 
 
 def get_fast_coordinates(
@@ -110,15 +122,15 @@ def get_pipes() -> Response:
 
     coordinates, coordinate_indices, coordinate_lengths = get_fast_coordinates(geometry.geometry)
 
-    raw_rows: list[dict[str, Any]] = dataframe_to_dict_records(geometry)
-    features: list[dict[str, Any]] = [
-        convert_geodataframe_row_to_geojson(
-            row, coordinates[coordinate_indices[i] : coordinate_indices[i] + coordinate_lengths[i]]
-        )
-        for i, row in enumerate(raw_rows)
-    ]
-    json_str: str = dumps({"type": "FeatureCollection", "features": features})
-    return app.response_class((json_str, "\n"))
+    geojson_dict: list[dict[str, Any]] = dataframe_to_geojson_features(
+        geometry, coordinates, coordinate_indices, coordinate_lengths
+    )
+
+    json_str: bytes = msgspec.json.encode({"type": "FeatureCollection", "features": geojson_dict})
+
+    response = Response(json_str, status=200, mimetype="application/json")
+
+    return response
 
 
 if __name__ == "__main__":
