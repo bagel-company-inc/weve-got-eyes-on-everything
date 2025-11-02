@@ -11,11 +11,19 @@ from pandas import read_csv
 from geopandas import GeoDataFrame, GeoSeries
 from shapely import LineString, Point, get_coordinates
 
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
 
 app = Flask(__name__)
 CORS(app)
 
 DATA_PATH = os.path.join(app.root_path, "data")
+
+
+def lerp(x_min: float, x_max: float, t: float) -> float:
+    return (x_max - x_min) * t + x_min
 
 
 def load_csv_to_gdf(path: str) -> GeoDataFrame:
@@ -51,8 +59,34 @@ class Bounds(NamedTuple):
         )
 
 
-def find_geometry_within_bounds(gdf: GeoDataFrame, gbounds: Bounds) -> GeoDataFrame:
-    found = gdf.sindex.intersection(gbounds.overfit(40))
+def simplify_geometry(gdf: GeoDataFrame, bounds: Bounds, zoom_level: float) -> GeoDataFrame:
+    # Hacky and very bespoke to the mapping system we are using
+    # both in the zoom values, and in the projection
+    # ASSUMES WGS 84 PROJECTION
+
+    zoom_max: float = 16
+    zoom_min: float = 11
+
+    geom_length_max: float = 0.0005
+    geom_length_min: float = 0.00002
+
+    if zoom_level < zoom_max:
+        gdf = gdf[gdf.geometry.geom_type != "Point"]
+
+    if zoom_level < 15:
+        zoom_percent: float = (zoom_level - zoom_max) / (zoom_min - zoom_max)
+        length_threshold: float = lerp(geom_length_min, geom_length_max, zoom_percent)
+
+        length_threshold = min(max(length_threshold, geom_length_min), geom_length_max)
+        gdf = gdf[gdf.geometry.length > length_threshold]
+        gdf.geometry = gdf.geometry.simplify(tolerance=length_threshold)
+    return gdf
+
+
+def find_geometry_within_bounds(
+    gdf: GeoDataFrame, gbounds: Bounds, zoom_level: float
+) -> GeoDataFrame:
+    found = gdf.sindex.intersection(gbounds.overfit(100))
     return gdf.iloc[found]
 
 
@@ -117,8 +151,11 @@ def get_pipes() -> Response:
     if not bbox_param:
         return app.response_class("[]")
     bounds: Bounds = Bounds.parse(bbox_param)
+    zoom_level: float = float(request.args.get("zoom", "14"))
 
-    geometry: GeoDataFrame = find_geometry_within_bounds(GXP, bounds)
+    gdf: GeoDataFrame = simplify_geometry(GXP, bounds, zoom_level)
+
+    geometry: GeoDataFrame = find_geometry_within_bounds(gdf, bounds, zoom_level)
 
     coordinates, coordinate_indices, coordinate_lengths = get_fast_coordinates(geometry.geometry)
 

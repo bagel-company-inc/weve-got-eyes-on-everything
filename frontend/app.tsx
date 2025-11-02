@@ -7,9 +7,23 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import { Map } from "react-map-gl/maplibre";
-import { WebMercatorViewport } from "@deck.gl/core";
+import { WebMercatorViewport, Widget } from "@deck.gl/core";
 import { DeckGL } from "@deck.gl/react";
 import { GeoJsonLayer } from "@deck.gl/layers";
+import {
+  CompassWidget,
+  _FpsWidget as FpsWidget,
+  ZoomWidget,
+  _ScaleWidget as ScaleWidget,
+  DarkGlassTheme,
+  LightGlassTheme,
+} from "@deck.gl/widgets";
+import "@deck.gl/widgets/stylesheet.css";
+
+const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+const widgetTheme = prefersDarkScheme.matches
+  ? DarkGlassTheme
+  : LightGlassTheme;
 
 // Throttle: limit function calls to once per interval
 function throttle<T extends (...args: any[]) => void>(
@@ -75,6 +89,7 @@ export default function App() {
   async function fetchVisibleData(vs: any) {
     setLoadingGeoJson(true);
     const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(vs);
+    const zoomLevel = vs.zoom;
 
     // Cancel any ongoing request
     if (currentAbortController.current) {
@@ -85,7 +100,7 @@ export default function App() {
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}`,
+        `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}`,
         { signal: controller.signal }
       );
       const data = await res.json();
@@ -162,6 +177,17 @@ export default function App() {
       layers={layers}
       pickingRadius={10}
       onClick={(info) => setSelectedId(info.object?.properties.name)}
+      widgets={[
+        new FpsWidget({ style: widgetTheme, placement: "top-left" }),
+        new ScaleWidget({ style: widgetTheme, placement: "bottom-left" }),
+        new CompassWidget({ style: widgetTheme, placement: "top-right" }),
+        new ZoomWidget({ style: widgetTheme, placement: "top-right" }),
+      ]}
+      getCursor={(interactiveState) => {
+        if (interactiveState.isDragging) return "grabbing";
+        if (interactiveState.isHovering) return "pointer";
+        return "grab";
+      }}
     >
       <Map reuseMaps mapStyle={MAP_STYLE} />
     </DeckGL>
