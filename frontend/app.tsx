@@ -8,6 +8,8 @@ import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
 
 export default function CommonModelViewer() {
+  const [attributeData, setAttributeData] = React.useState<Record<string, any> | null>(null);
+
   return (
     <CssVarsProvider disableTransitionOnChange>
       <CssBaseline />
@@ -19,7 +21,7 @@ export default function CommonModelViewer() {
           overflow: "hidden",
         }}
       >
-        <Sidebar />
+        <Sidebar attributeData={attributeData} />
         <Box
           sx={{
             flex: 1,
@@ -28,7 +30,7 @@ export default function CommonModelViewer() {
             position: "relative",
           }}
         >
-          <CommonModelMap />
+          <CommonModelMap onAttributeDataChange={setAttributeData} />
         </Box>
       </Box>
     </CssVarsProvider>

@@ -8,10 +8,15 @@ import TabPanel from "@mui/joy/TabPanel";
 import Typography from "@mui/joy/Typography";
 import Sheet from "@mui/joy/Sheet";
 
+import AttributeList from "./attribute_list";
 import Colouring from "./colouring";
 import SearchBar from "./search_bar";
 
-export default function Sidebar() {
+interface SidebarProps {
+  attributeData: Record<string, any> | null;
+}
+
+export default function Sidebar({ attributeData }: SidebarProps) {
   return (
     <Sheet
       className="Sidebar"
@@ -51,6 +56,7 @@ export default function Sidebar() {
         </TabList>
         <TabPanel value={0}>
           <SearchBar />
+          <AttributeList attributeData={attributeData} />
         </TabPanel>
         <TabPanel value={1}>
           <Colouring />

@@ -77,7 +77,11 @@ function getCurrentBounds(
   return [topLeft[0], bottomRight[1], bottomRight[0], topLeft[1]];
 }
 
-export default function CommonModelMap() {
+interface CommonModelMapProps {
+  onAttributeDataChange?: (data: Record<string, any> | null) => void;
+}
+
+export default function CommonModelMap({ onAttributeDataChange }: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [loadingGeoJson, setLoadingGeoJson] = useState(false);
   const [viewState, setViewState] = useState({
@@ -153,14 +157,14 @@ export default function CommonModelMap() {
   }
 
   // Throttled fetch for continuous panning
-  const throttledFetch = useCallback(throttle(fetchVisibleData, 1000), []);
+  const throttledFetch = useCallback(throttle(fetchVisibleData, 2000), []);
 
   // Debounced fetch for final "stop" fetch
-  const debouncedFetch = useCallback(debounce(fetchVisibleData, 200), []);
+  const debouncedFetch = useCallback(debounce(fetchVisibleData, 100), []);
 
   const handleViewChange = ({ viewState: vs }: any) => {
     setViewState(vs);
-    throttledFetch(vs);
+    // throttledFetch(vs);
     debouncedFetch(vs);
   };
 
@@ -194,7 +198,27 @@ export default function CommonModelMap() {
           return f.properties.colour;
         },
 
-        onClick: (info) => setSelectedId(info.object?.properties.name),
+        onClick: (info) => {
+          const name = info.object?.properties.name;
+          if (!name) return;
+          console.log(name);
+          fetch(`http://127.0.0.1:5000/api/attributes?name=${name}`)
+            .then((response) => response.json())
+            .then((data) => {
+              console.log(data);
+              if (onAttributeDataChange) {
+                onAttributeDataChange(data);
+              }
+            })
+            .catch((err) => {
+              console.error("Error getting attributes:", err);
+              if (onAttributeDataChange) {
+                onAttributeDataChange(null);
+              }
+            });
+
+          setSelectedId(name);
+        },
         onHover: (info) => setHoveredId(info.object?.properties.name),
 
         updateTriggers: {
