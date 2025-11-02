@@ -54,7 +54,11 @@ function debounce<T extends (...args: any[]) => void>(
 const MAP_STYLE =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
-function getCurrentBounds(viewState: any, containerWidth: number, containerHeight: number): number[] {
+function getCurrentBounds(
+  viewState: any,
+  containerWidth: number,
+  containerHeight: number
+): number[] {
   const { width, height } = {
     width: containerWidth,
     height: containerHeight,
@@ -173,7 +177,7 @@ export default function CommonModelMap() {
       new GeoJsonLayer({
         id: "geojson-layer",
         data: geoJsonData,
-        pickable: viewState.zoom >= 16,
+        pickable: viewState.zoom >= 15,
         filled: false,
         getPointRadius: 0.2,
         lineCapRounded: true,
