@@ -1,5 +1,4 @@
 import * as React from "react";
-import GlobalStyles from "@mui/joy/GlobalStyles";
 import Box from "@mui/joy/Box";
 import Tab from "@mui/joy/Tab";
 import Tabs from "@mui/joy/Tabs";
@@ -14,17 +13,22 @@ import SearchBar from "./search_bar";
 
 interface SidebarProps {
   attributeData: Record<string, any> | null;
+  searchBarSelectionChange?: (name: string | null) => void;
+  width?: number;
 }
 
-export default function Sidebar({ attributeData }: SidebarProps) {
+export default function Sidebar({
+  attributeData,
+  searchBarSelectionChange,
+  width = 260,
+}: SidebarProps) {
   return (
     <Sheet
       className="Sidebar"
       sx={{
         position: { xs: "fixed", md: "sticky" },
-        zIndex: 10000,
         height: "100dvh",
-        width: "var(--Sidebar-width)",
+        width: `${width}px`,
         top: 0,
         p: 2,
         flexShrink: 0,
@@ -35,17 +39,6 @@ export default function Sidebar({ attributeData }: SidebarProps) {
         borderColor: "divider",
       }}
     >
-      <GlobalStyles
-        styles={(theme) => ({
-          ":root": {
-            "--Sidebar-width": "240px",
-            [theme.breakpoints.up("lg")]: {
-              "--Sidebar-width": "260px",
-            },
-          },
-        })}
-      />
-
       <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
         <Typography level="title-lg">Common Model Viewer</Typography>
       </Box>
@@ -55,7 +48,7 @@ export default function Sidebar({ attributeData }: SidebarProps) {
           <Tab>Colouring</Tab>
         </TabList>
         <TabPanel value={0}>
-          <SearchBar />
+          <SearchBar onSelectionChange={searchBarSelectionChange} />
           <AttributeList attributeData={attributeData} />
         </TabPanel>
         <TabPanel value={1}>

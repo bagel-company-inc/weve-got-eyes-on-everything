@@ -3,7 +3,6 @@ import Box from "@mui/joy/Box";
 import { Typography } from "@mui/joy";
 import List from "@mui/joy/List";
 import ListItem from "@mui/joy/ListItem";
-import ListItemContent from "@mui/joy/ListItemContent";
 import Divider from "@mui/joy/Divider";
 
 interface AttributeListProps {
@@ -30,19 +29,40 @@ export default function AttributeList({ attributeData }: AttributeListProps) {
         variant="outlined"
         sx={{
           borderRadius: "sm",
-          maxHeight: "400px",
+          maxHeight: "700px",
           overflow: "auto",
+          p: 0,
         }}
       >
         {Object.entries(attributeData).map(([key, value], index) => (
           <React.Fragment key={key}>
-            <ListItem>
-              <ListItemContent>
-                <Typography level="title-sm">{key}</Typography>
-                <Typography level="body-sm" sx={{ color: "text.secondary" }}>
-                  {value !== null && value !== undefined ? String(value) : "—"}
-                </Typography>
-              </ListItemContent>
+            <ListItem
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr", // left/right column ratio
+                alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 1,
+              }}
+            >
+              <Typography
+                level="title-sm"
+                sx={{ color: "text.primary", wordBreak: "break-word" }}
+              >
+                {key}
+              </Typography>
+
+              <Typography
+                level="body-sm"
+                sx={{
+                  color: "text.secondary",
+                  textAlign: "right",
+                  wordBreak: "break-word",
+                }}
+              >
+                {value !== null && value !== undefined ? String(value) : "—"}
+              </Typography>
             </ListItem>
             {index < Object.entries(attributeData).length - 1 && <Divider />}
           </React.Fragment>

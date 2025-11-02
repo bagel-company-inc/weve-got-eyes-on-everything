@@ -6,9 +6,18 @@ import React, {
   useState,
 } from "react";
 import { Map } from "react-map-gl/maplibre";
-import { WebMercatorViewport, Widget } from "@deck.gl/core";
+import {
+  MapView,
+  WebMercatorViewport,
+  Widget,
+  FlyToInterpolator,
+} from "@deck.gl/core";
 import { DeckGL } from "@deck.gl/react";
 import { GeoJsonLayer } from "@deck.gl/layers";
+import {
+  DataFilterExtension,
+  DataFilterExtensionProps,
+} from "@deck.gl/extensions";
 import {
   CompassWidget,
   _FpsWidget as FpsWidget,
@@ -18,6 +27,7 @@ import {
   LightGlassTheme,
 } from "@deck.gl/widgets";
 import "@deck.gl/widgets/stylesheet.css";
+import type { Feature, Geometry } from "geojson";
 
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 const widgetTheme = prefersDarkScheme.matches
@@ -79,9 +89,13 @@ function getCurrentBounds(
 
 interface CommonModelMapProps {
   onAttributeDataChange?: (data: Record<string, any> | null) => void;
+  searchBarSelected?: string | null;
 }
 
-export default function CommonModelMap({ onAttributeDataChange }: CommonModelMapProps) {
+export default function CommonModelMap({
+  onAttributeDataChange,
+  searchBarSelected,
+}: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [loadingGeoJson, setLoadingGeoJson] = useState(false);
   const [viewState, setViewState] = useState({
@@ -95,6 +109,24 @@ export default function CommonModelMap({ onAttributeDataChange }: CommonModelMap
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerSizeRef = useRef({ width: 0, height: 0 });
+
+  const selectObject = (name: string) => {
+    if (!name) return;
+    fetch(`http://127.0.0.1:5000/api/attributes?name=${name}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (onAttributeDataChange) {
+          onAttributeDataChange(data);
+        }
+      })
+      .catch((err) => console.error("Error getting attributes:", err));
+
+    setSelectedId(name);
+  };
+
+  type PropertiesType = {
+    name: string;
+  };
 
   // Update container size on mount and when container size changes
   useEffect(() => {
@@ -150,7 +182,9 @@ export default function CommonModelMap({ onAttributeDataChange }: CommonModelMap
       const data = await res.json();
       setGeoJsonData(data);
     } catch (err) {
-      console.error("Error fetching visible data:", err);
+      if (err.name !== "AbortError") {
+        console.error("Error fetching visible data:", err);
+      }
     } finally {
       setLoadingGeoJson(false);
     }
@@ -164,7 +198,7 @@ export default function CommonModelMap({ onAttributeDataChange }: CommonModelMap
 
   const handleViewChange = ({ viewState: vs }: any) => {
     setViewState(vs);
-    // throttledFetch(vs);
+    throttledFetch(vs);
     debouncedFetch(vs);
   };
 
@@ -175,65 +209,101 @@ export default function CommonModelMap({ onAttributeDataChange }: CommonModelMap
     }
   }, [containerSize.width, containerSize.height]);
 
+  useEffect(() => {
+    selectObject(searchBarSelected);
+    fetch(`http://127.0.0.1:5000/api/centroid?name=${searchBarSelected}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data) return;
+        if (data.length == 0) return;
+        console.log(data);
+        const lon = data[0];
+        const lat = data[1];
+        const newViewState = {
+          latitude: lat,
+          longitude: lon,
+          zoom: viewState.zoom,
+          transitionDuration: 2000,
+          transitionInterpolator: new FlyToInterpolator(),
+        };
+        setViewState(newViewState);
+      })
+      .catch((err) => console.error("Error getting centroid:", err));
+  }, [searchBarSelected]);
+
   const layers = useMemo(() => {
     if (!geoJsonData) return [];
-    return [
-      new GeoJsonLayer({
-        id: "geojson-layer",
-        data: geoJsonData,
-        pickable: viewState.zoom >= 15,
-        filled: false,
-        getPointRadius: 0.2,
-        lineCapRounded: true,
-        lineJointRounded: true,
-        getLineWidth: (f) => {
-          if (f.properties.name === selectedId) return 0.5;
-          return 0.3;
-        },
-        lineWidthMinPixels: 1,
 
-        getLineColor: (f) => {
-          if (f.properties.name === selectedId) return [255, 100, 0];
-          if (f.properties.name === hoveredId) return [200, 200, 200];
-          return f.properties.colour;
-        },
+    const layers_ = [];
 
-        onClick: (info) => {
-          const name = info.object?.properties.name;
-          if (!name) return;
-          console.log(name);
-          fetch(`http://127.0.0.1:5000/api/attributes?name=${name}`)
-            .then((response) => response.json())
-            .then((data) => {
-              console.log(data);
-              if (onAttributeDataChange) {
-                onAttributeDataChange(data);
-              }
-            })
-            .catch((err) => {
-              console.error("Error getting attributes:", err);
-              if (onAttributeDataChange) {
-                onAttributeDataChange(null);
-              }
-            });
+    const extremeHighlightedLayer = new GeoJsonLayer<
+      PropertiesType,
+      DataFilterExtensionProps<Feature<Geometry, PropertiesType>>
+    >({
+      id: "extreme-highlight-layer",
+      data: geoJsonData,
+      pickable: false,
+      getFilterCategory: (d) => d.properties.name,
+      filterCategories: [searchBarSelected],
+      getFillColor: [40, 255, 0],
 
-          setSelectedId(name);
-        },
-        onHover: (info) => setHoveredId(info.object?.properties.name),
+      updateTriggers: {
+        filterCategories: [searchBarSelected],
+      },
 
-        updateTriggers: {
-          onClick: [selectedId],
-          getLineColor: [selectedId, hoveredId],
-          getLineWidth: [selectedId],
-          pickable: [viewState],
-        },
+      getLineWidth: 10,
+      getPointRadius: 10,
 
-        transitions: {
-          getLineColor: 200,
-          getLineWidth: 100,
-        },
-      }),
-    ];
+      transitions: {
+        getPointRadius: 300,
+        getLineWidth: 300,
+      },
+
+      extensions: [new DataFilterExtension({ categorySize: 1 })],
+    });
+    // layers_.push(extremeHighlightedLayer);
+
+    const geojsonLayer = new GeoJsonLayer({
+      id: "geojson-layer",
+      data: geoJsonData,
+      pickable: viewState.zoom >= 15,
+      filled: false,
+      getPointRadius: 1 / viewState.zoom,
+      lineCapRounded: true,
+      lineJointRounded: true,
+      getLineWidth: (f) => {
+        if (f.properties.name === selectedId) return;
+        if (f.properties.name === selectedId) return 0.3;
+        return 1 / viewState.zoom;
+      },
+      lineWidthMinPixels: 1,
+
+      getLineColor: (f) => {
+        if (f.properties.name === selectedId) return [255, 100, 0];
+        if (f.properties.name === hoveredId) return [200, 200, 200];
+        return f.properties.colour;
+      },
+
+      onClick: (info) => {
+        selectObject(info.object?.properties.name);
+      },
+      onHover: (info) => setHoveredId(info.object?.properties.name),
+
+      updateTriggers: {
+        onClick: [selectedId],
+        getLineColor: [selectedId, hoveredId],
+        getLineWidth: [selectedId, viewState],
+        pickable: [viewState],
+      },
+
+      transitions: {
+        getLineColor: 200,
+        getLineWidth: 100,
+      },
+    });
+    layers_.push(geojsonLayer);
+
+    return layers_;
   }, [geoJsonData, selectedId, hoveredId]);
 
   return (

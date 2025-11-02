@@ -13,6 +13,7 @@
     "@mui/joy": "^5.0.0-beta.52",
     "@mui/icons-material": "^5.0.0-beta.52",
     "@mui/material": "^5.0.0-beta.52",
+    "material-ui-color-picker": "3.2.0",
     "@types/d3-scale": "^4.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",

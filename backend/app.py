@@ -7,6 +7,7 @@ from flask_cors import CORS, cross_origin
 
 from pandas import DataFrame, read_csv
 from geopandas import GeoDataFrame, GeoSeries
+from shapely import Point
 
 from get_geometry import Bounds, get_geometry
 
@@ -43,8 +44,37 @@ def get_column_unique_values() -> Response:
         return Response("[]", status=200, mimetype="application/json")
     if column not in GXP.columns:
         return Response("[]", status=200, mimetype="application/json")
-    unique_values: list[Any] = GXP[column].unique().tolist()
+    unique_values: list[Any] = sorted(GXP[column].unique().tolist())
     json_bytes: bytes = msgspec.json.encode(unique_values)
+    return Response(json_bytes, status=200, mimetype="application/json")
+
+
+@cross_origin(origins=["*"])
+@app.route("/api/search_complete", methods=["GET", "OPTIONS"])
+def get_search_results() -> Response:
+    typed_input: str | None = request.args.get("input")
+    if not typed_input:
+        return Response("[]", status=200, mimetype="application/json")
+    if len(typed_input) < 2:
+        return Response("[]", status=200, mimetype="application/json")
+    results: list[str] = GXP[GXP.name.str.contains(typed_input)].name.unique().tolist()[:200]
+    results.sort(key=len)
+    json_bytes: bytes = msgspec.json.encode(results)
+    return Response(json_bytes, status=200, mimetype="application/json")
+
+
+@cross_origin(origins=["*"])
+@app.route("/api/centroid", methods=["GET", "OPTIONS"])
+def get_centroid_at_name() -> Response:
+    object_name: str | None = request.args.get("name")
+    if not object_name:
+        return Response("[]", status=200, mimetype="application/json")
+    attributes: GeoDataFrame = GXP[GXP.name == object_name]
+    if len(attributes) == 0:
+        return Response("[]", status=200, mimetype="application/json")
+    point: Point = attributes.geometry.values[0].centroid
+    coordinates = tuple(point.coords[0])
+    json_bytes: bytes = msgspec.json.encode(coordinates)
     return Response(json_bytes, status=200, mimetype="application/json")
 
 
@@ -54,7 +84,9 @@ def get_attributes() -> Response:
     object_name: str | None = request.args.get("name")
     if not object_name:
         return Response("[]", status=200, mimetype="application/json")
-    attributes: DataFrame = GXP[GXP.name == object_name]
+    attributes: GeoDataFrame = GXP[GXP.name == object_name]
+    if len(attributes) == 0:
+        return Response("[]", status=200, mimetype="application/json")
     attribute_dict: dict[str, Any] = dict(zip(attributes.columns, attributes.values[0]))
     json_bytes: bytes = msgspec.json.encode(
         {

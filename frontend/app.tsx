@@ -8,10 +8,50 @@ import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
 
 export default function CommonModelViewer() {
-  const [attributeData, setAttributeData] = React.useState<Record<string, any> | null>(null);
+  const [attributeData, setAttributeData] = React.useState<Record<
+    string,
+    any
+  > | null>(null);
+  const [searchBarSelectedName, setSearchBarSelectedName] = React.useState<
+    string | null
+  >(null);
+  const [sidebarWidth, setSidebarWidth] = React.useState(260);
+  const [isResizing, setIsResizing] = React.useState(false);
+
+  const searchBarSelectionChange = React.useCallback(() => {}, []);
+
+  const handleMouseDown = React.useCallback(() => {
+    setIsResizing(true);
+  }, []);
+
+  const handleMouseMove = React.useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      // Constrain width between 200px and 600px
+      const constrainedWidth = Math.max(200, Math.min(600, newWidth));
+      setSidebarWidth(constrainedWidth);
+    },
+    [isResizing]
+  );
+
+  const handleMouseUp = React.useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   return (
-    <CssVarsProvider disableTransitionOnChange>
+    <CssVarsProvider>
       <CssBaseline />
       <Box
         sx={{
@@ -21,16 +61,37 @@ export default function CommonModelViewer() {
           overflow: "hidden",
         }}
       >
-        <Sidebar attributeData={attributeData} />
+        <Sidebar
+          attributeData={attributeData}
+          searchBarSelectionChange={setSearchBarSelectedName}
+          width={sidebarWidth}
+        />
+        <Box
+          onMouseDown={handleMouseDown}
+          sx={{
+            width: "4px",
+            cursor: "col-resize",
+            backgroundColor: isResizing ? "primary.500" : "divider",
+            "&:hover": {
+              backgroundColor: "primary.300",
+            },
+            transition: "background-color 0.2s",
+            zIndex: 1000,
+            position: "relative",
+            flexShrink: 0,
+          }}
+        />
         <Box
           sx={{
             flex: 1,
             height: "100%",
-            marginLeft: { xs: "var(--Sidebar-width)", md: 0 },
             position: "relative",
           }}
         >
-          <CommonModelMap onAttributeDataChange={setAttributeData} />
+          <CommonModelMap
+            onAttributeDataChange={setAttributeData}
+            searchBarSelected={searchBarSelectedName}
+          />
         </Box>
       </Box>
     </CssVarsProvider>
