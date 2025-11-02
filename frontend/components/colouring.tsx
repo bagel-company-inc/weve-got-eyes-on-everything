@@ -1,13 +1,33 @@
 import * as React from "react";
 import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
 import Select from "@mui/joy/Select";
 import Option from "@mui/joy/Option";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import List from "@mui/joy/List";
+import ListItem from "@mui/joy/ListItem";
+import Typography from "@mui/joy/Typography";
+import ColorfulPopup from "./colourful_popup";
+
+function hslToHex(h: number, s: number, l: number): string {
+  l /= 100;
+  const a = (s * Math.min(l, 1 - l)) / 100;
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, "0"); // convert to Hex and prefix "0" if needed
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
 
 export default function Colouring() {
   const [columnNames, setColumnNames] = React.useState<string[]>([]);
   const [selectedValue, setSelectedValue] = React.useState<string>("");
+  const [categories, setCategories] = React.useState<string[]>([]);
+  const [categoryColours, setCategoryColours] = React.useState<{
+    [dict_key: string]: string;
+  }>({});
   useEffect(() => {
     fetch("http://127.0.0.1:5000/api/column_names")
       .then((response) => response.json())
@@ -17,6 +37,51 @@ export default function Colouring() {
         setSelectedValue(data[0]);
       });
   }, []);
+
+  const categoryList = useMemo(() => {
+    return (
+      <List
+        variant="outlined"
+        sx={{
+          borderRadius: "sm",
+          maxHeight: "700px",
+          overflow: "auto",
+          p: 0,
+        }}
+      >
+        {categories.map((category) => (
+          <React.Fragment key={category}>
+            <ListItem
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr", // left/right column ratio
+                alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 1,
+              }}
+            >
+              <ColorfulPopup
+                colour={categoryColours[category]}
+                onChange={(colour) => {
+                  setCategoryColours((prev) => ({
+                    ...prev,
+                    [category]: colour,
+                  }));
+                }}
+              />
+              <Typography
+                level="title-sm"
+                sx={{ color: "text.primary", wordBreak: "break-word" }}
+              >
+                {category}
+              </Typography>
+            </ListItem>
+          </React.Fragment>
+        ))}
+      </List>
+    );
+  }, [categories, categoryColours]);
 
   return (
     <Box>
@@ -37,7 +102,14 @@ export default function Colouring() {
               )
                 .then((response) => response.json())
                 .then((data) => {
-                  console.log(data);
+                  setCategories(data);
+                  const newCategoryColours = {};
+                  for (let i = 0; i < data.length; i++) {
+                    let percent = i / data.length;
+                    let hexColor = hslToHex(percent * 360, 60, 80);
+                    newCategoryColours[data[i]] = hexColor;
+                  }
+                  setCategoryColours(newCategoryColours);
                 });
             }}
           >
@@ -45,6 +117,7 @@ export default function Colouring() {
           </Option>
         ))}
       </Select>
+      {categoryList}
     </Box>
   );
 }
