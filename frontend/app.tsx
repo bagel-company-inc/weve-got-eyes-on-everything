@@ -6,6 +6,7 @@ import Box from "@mui/joy/Box";
 
 import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
+import { ColouringContext } from "./components/colouring";
 
 export default function CommonModelViewer() {
   const [attributeData, setAttributeData] = React.useState<Record<
@@ -19,6 +20,9 @@ export default function CommonModelViewer() {
   const [isResizing, setIsResizing] = React.useState(false);
 
   const searchBarSelectionChange = React.useCallback(() => {}, []);
+
+  const [colouringContext, setColouringContext] =
+    React.useState<ColouringContext>({ category: "", mapping: {} });
 
   const handleMouseDown = React.useCallback(() => {
     setIsResizing(true);
@@ -65,6 +69,8 @@ export default function CommonModelViewer() {
           attributeData={attributeData}
           searchBarSelectionChange={setSearchBarSelectedName}
           width={sidebarWidth}
+          colouringContext={colouringContext}
+          setColouringContext={setColouringContext}
         />
         <Box
           onMouseDown={handleMouseDown}
@@ -91,6 +97,7 @@ export default function CommonModelViewer() {
           <CommonModelMap
             onAttributeDataChange={setAttributeData}
             searchBarSelected={searchBarSelectedName}
+            colouringContext={colouringContext}
           />
         </Box>
       </Box>

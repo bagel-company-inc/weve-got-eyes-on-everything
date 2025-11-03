@@ -8,19 +8,23 @@ import Typography from "@mui/joy/Typography";
 import Sheet from "@mui/joy/Sheet";
 
 import AttributeList from "./attribute_list";
-import Colouring from "./colouring";
+import { Colouring, ColouringContext } from "./colouring";
 import SearchBar from "./search_bar";
 
 interface SidebarProps {
   attributeData: Record<string, any> | null;
   searchBarSelectionChange?: (name: string | null) => void;
   width?: number;
+  colouringContext: ColouringContext;
+  setColouringContext: (prev: ColouringContext) => ColouringContext;
 }
 
 export default function Sidebar({
   attributeData,
   searchBarSelectionChange,
   width = 260,
+  colouringContext,
+  setColouringContext,
 }: SidebarProps) {
   return (
     <Sheet
@@ -52,7 +56,10 @@ export default function Sidebar({
           <AttributeList attributeData={attributeData} />
         </TabPanel>
         <TabPanel value={1}>
-          <Colouring />
+          <Colouring
+            colouringContext={colouringContext}
+            setColouringContext={setColouringContext}
+          />
         </TabPanel>
       </Tabs>
     </Sheet>

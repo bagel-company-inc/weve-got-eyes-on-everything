@@ -21,13 +21,30 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-export default function Colouring() {
+type ColourMapping = {
+  [category: string | number]: string;
+};
+
+export type ColouringContext = {
+  category: string;
+  mapping: ColourMapping;
+};
+
+interface ColouringProps {
+  colouringContext: ColouringContext;
+  setColouringContext: (prev: ColouringContext) => void;
+}
+
+export function Colouring({
+  colouringContext,
+  setColouringContext,
+}: ColouringProps) {
   const [columnNames, setColumnNames] = React.useState<string[]>([]);
   const [selectedValue, setSelectedValue] = React.useState<string>("");
-  const [categories, setCategories] = React.useState<string[]>([]);
-  const [categoryColours, setCategoryColours] = React.useState<{
-    [dict_key: string]: string;
-  }>({});
+  const [categoryValues, setCategoryValues] = React.useState<
+    (string | number)[]
+  >([]);
+
   useEffect(() => {
     fetch("http://127.0.0.1:5000/api/column_names")
       .then((response) => response.json())
@@ -49,39 +66,42 @@ export default function Colouring() {
           p: 0,
         }}
       >
-        {categories.map((category) => (
+        {categoryValues.map((category) => (
           <React.Fragment key={category}>
             <ListItem
               sx={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr", // left/right column ratio
-                alignItems: "center",
+                gridTemplateColumns: "30px 1fr", // left/right column ratio
+                alignItems: "left",
                 gap: 1,
-                px: 1.5,
+                px: 1,
                 py: 1,
               }}
             >
               <ColorfulPopup
-                colour={categoryColours[category]}
+                colour={colouringContext.mapping[category]}
                 onChange={(colour) => {
-                  setCategoryColours((prev) => ({
-                    ...prev,
-                    [category]: colour,
-                  }));
+                  setColouringContext({
+                    category: colouringContext.category,
+                    mapping: {
+                      ...colouringContext.mapping,
+                      [category]: colour,
+                    },
+                  });
                 }}
               />
               <Typography
                 level="title-sm"
                 sx={{ color: "text.primary", wordBreak: "break-word" }}
               >
-                {category}
+                {`${category}`}
               </Typography>
             </ListItem>
           </React.Fragment>
         ))}
       </List>
     );
-  }, [categories, categoryColours]);
+  }, [categoryValues, colouringContext]);
 
   return (
     <Box>
@@ -102,14 +122,22 @@ export default function Colouring() {
               )
                 .then((response) => response.json())
                 .then((data) => {
-                  setCategories(data);
+                  setCategoryValues(data.slice(0, 50));
                   const newCategoryColours = {};
                   for (let i = 0; i < data.length; i++) {
                     let percent = i / data.length;
-                    let hexColor = hslToHex(percent * 360, 60, 80);
+                    let angle = percent * 360;
+                    if (i % 2 == 0) {
+                      angle += 180;
+                    }
+                    angle %= 360;
+                    let hexColor = hslToHex(angle, 80, 50);
                     newCategoryColours[data[i]] = hexColor;
                   }
-                  setCategoryColours(newCategoryColours);
+                  setColouringContext({
+                    category: column,
+                    mapping: newCategoryColours,
+                  });
                 });
             }}
           >

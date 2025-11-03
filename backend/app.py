@@ -44,7 +44,13 @@ def get_column_unique_values() -> Response:
         return Response("[]", status=200, mimetype="application/json")
     if column not in GXP.columns:
         return Response("[]", status=200, mimetype="application/json")
-    unique_values: list[Any] = sorted(GXP[column].unique().tolist())
+
+    def custom_sort_key(x: Any) -> Any:
+        if x is None:
+            return ""
+        return x
+
+    unique_values: list[Any] = sorted(GXP[column].unique().tolist(), key=custom_sort_key)
     json_bytes: bytes = msgspec.json.encode(unique_values)
     return Response(json_bytes, status=200, mimetype="application/json")
 
@@ -106,8 +112,9 @@ def get_geojson() -> Response:
         return app.response_class("[]")
     bounds: Bounds = Bounds.parse(bbox_param)
     zoom_level: float = float(request.args.get("zoom", "14"))
+    column: str | None = request.args.get("column")
 
-    geojson_dict: dict[str, Any] = get_geometry(GXP, bounds, zoom_level)
+    geojson_dict: dict[str, Any] = get_geometry(GXP, bounds, zoom_level, column)
 
     json_bytes: bytes = msgspec.json.encode(geojson_dict)
     response = Response(json_bytes, status=200, mimetype="application/json")

@@ -95,8 +95,10 @@ def dataframe_to_geojson_features(
     coordinates: NDArray[np.float64],
     coordinate_indices: NDArray[np.int64],
     coordinate_lengths: NDArray[np.int64],
+    columns: list[str],
 ) -> list[dict[str, Any]]:
     columns_to_index: dict[str, int] = {column: i for i, column in enumerate(df.columns)}
+    columns = [column for column in columns if column in columns_to_index]
     return [
         {
             "type": "Feature",
@@ -104,9 +106,7 @@ def dataframe_to_geojson_features(
                 row[columns_to_index["geometry"]],
                 coordinates[coordinate_indices[i] : coordinate_indices[i] + coordinate_lengths[i]],
             ),
-            "properties": {
-                "name": row[columns_to_index["name"]],
-            },
+            "properties": {column: row[columns_to_index[column]] for column in columns},
         }
         for i, row in enumerate(df.itertuples(index=False, name=None))
     ]
@@ -122,15 +122,21 @@ def get_fast_coordinates(
     return (coordinates, coordinate_indices, coordinate_lengths)
 
 
-def get_geometry(base_gdf: GeoDataFrame, bounds: Bounds, zoom_level: float) -> dict[str, Any]:
+def get_geometry(
+    base_gdf: GeoDataFrame, bounds: Bounds, zoom_level: float, column: str | None
+) -> dict[str, Any]:
     gdf: GeoDataFrame = simplify_geometry(base_gdf, bounds, zoom_level)
 
     geometry: GeoDataFrame = find_geometry_within_bounds(gdf, bounds, zoom_level)
 
     coordinates, coordinate_indices, coordinate_lengths = get_fast_coordinates(geometry.geometry)
 
+    columns: list[str] = ["name"]
+    if column is not None:
+        columns.append(column)
+
     geojson_dict: list[dict[str, Any]] = dataframe_to_geojson_features(
-        geometry, coordinates, coordinate_indices, coordinate_lengths
+        geometry, coordinates, coordinate_indices, coordinate_lengths, columns=columns
     )
 
     return {"type": "FeatureCollection", "features": geojson_dict}

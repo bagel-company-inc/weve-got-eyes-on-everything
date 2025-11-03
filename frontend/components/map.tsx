@@ -28,6 +28,7 @@ import {
 } from "@deck.gl/widgets";
 import "@deck.gl/widgets/stylesheet.css";
 import type { Feature, Geometry } from "geojson";
+import { ColouringContext } from "./colouring";
 
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 const widgetTheme = prefersDarkScheme.matches
@@ -90,11 +91,13 @@ function getCurrentBounds(
 interface CommonModelMapProps {
   onAttributeDataChange?: (data: Record<string, any> | null) => void;
   searchBarSelected?: string | null;
+  colouringContext: ColouringContext;
 }
 
 export default function CommonModelMap({
   onAttributeDataChange,
   searchBarSelected,
+  colouringContext,
 }: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [loadingGeoJson, setLoadingGeoJson] = useState(false);
@@ -176,7 +179,7 @@ export default function CommonModelMap({
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}`,
+        `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`,
         { signal: controller.signal }
       );
       const data = await res.json();
@@ -191,10 +194,14 @@ export default function CommonModelMap({
   }
 
   // Throttled fetch for continuous panning
-  const throttledFetch = useCallback(throttle(fetchVisibleData, 2000), []);
+  const throttledFetch = useCallback(throttle(fetchVisibleData, 2000), [
+    colouringContext,
+  ]);
 
   // Debounced fetch for final "stop" fetch
-  const debouncedFetch = useCallback(debounce(fetchVisibleData, 100), []);
+  const debouncedFetch = useCallback(debounce(fetchVisibleData, 100), [
+    colouringContext,
+  ]);
 
   const handleViewChange = ({ viewState: vs }: any) => {
     setViewState(vs);
@@ -216,7 +223,6 @@ export default function CommonModelMap({
       .then((data) => {
         if (!data) return;
         if (data.length == 0) return;
-        console.log(data);
         const lon = data[0];
         const lat = data[1];
         const newViewState = {
@@ -272,7 +278,6 @@ export default function CommonModelMap({
       lineCapRounded: true,
       lineJointRounded: true,
       getLineWidth: (f) => {
-        if (f.properties.name === selectedId) return;
         if (f.properties.name === selectedId) return 0.3;
         return 1 / viewState.zoom;
       },
@@ -281,6 +286,17 @@ export default function CommonModelMap({
       getLineColor: (f) => {
         if (f.properties.name === selectedId) return [255, 100, 0];
         if (f.properties.name === hoveredId) return [200, 200, 200];
+        if (colouringContext.category in f.properties) {
+          const value = f.properties[colouringContext.category];
+          if (value in colouringContext.mapping) {
+            const hexColour = colouringContext.mapping[value];
+            var bigint = parseInt(hexColour.replace("#", ""), 16);
+            var r = (bigint >> 16) & 255;
+            var g = (bigint >> 8) & 255;
+            var b = bigint & 255;
+            return [r, g, b];
+          }
+        }
         return f.properties.colour;
       },
 
@@ -291,20 +307,20 @@ export default function CommonModelMap({
 
       updateTriggers: {
         onClick: [selectedId],
-        getLineColor: [selectedId, hoveredId],
+        getLineColor: [selectedId, hoveredId, colouringContext],
         getLineWidth: [selectedId, viewState],
         pickable: [viewState],
       },
 
       transitions: {
-        getLineColor: 200,
+        getLineColor: 50,
         getLineWidth: 100,
       },
     });
     layers_.push(geojsonLayer);
 
     return layers_;
-  }, [geoJsonData, selectedId, hoveredId]);
+  }, [geoJsonData, selectedId, hoveredId, colouringContext]);
 
   return (
     <div
