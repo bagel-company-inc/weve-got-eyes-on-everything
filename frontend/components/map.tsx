@@ -195,12 +195,14 @@ export default function CommonModelMap({
 
   // Throttled fetch for continuous panning
   const throttledFetch = useCallback(throttle(fetchVisibleData, 2000), [
-    colouringContext,
+    colouringContext.category,
+    colouringContext.mapping,
   ]);
 
   // Debounced fetch for final "stop" fetch
   const debouncedFetch = useCallback(debounce(fetchVisibleData, 100), [
-    colouringContext,
+    colouringContext.category,
+    colouringContext.mapping,
   ]);
 
   const handleViewChange = ({ viewState: vs }: any) => {
@@ -214,7 +216,12 @@ export default function CommonModelMap({
     if (containerSize.width > 0 && containerSize.height > 0) {
       fetchVisibleData(viewState);
     }
-  }, [containerSize.width, containerSize.height]);
+  }, [
+    containerSize.width,
+    containerSize.height,
+    colouringContext.category,
+    colouringContext.mapping,
+  ]);
 
   useEffect(() => {
     selectObject(searchBarSelected);
@@ -307,7 +314,12 @@ export default function CommonModelMap({
 
       updateTriggers: {
         onClick: [selectedId],
-        getLineColor: [selectedId, hoveredId, colouringContext],
+        getLineColor: [
+          selectedId,
+          hoveredId,
+          colouringContext.category,
+          colouringContext.mapping,
+        ],
         getLineWidth: [selectedId, viewState],
         pickable: [viewState],
       },
@@ -320,7 +332,13 @@ export default function CommonModelMap({
     layers_.push(geojsonLayer);
 
     return layers_;
-  }, [geoJsonData, selectedId, hoveredId, colouringContext]);
+  }, [
+    geoJsonData,
+    selectedId,
+    hoveredId,
+    colouringContext.category,
+    colouringContext.mapping,
+  ]);
 
   return (
     <div
