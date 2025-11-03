@@ -124,12 +124,13 @@ export function Colouring({
                 .then((data) => {
                   setCategoryValues(data.slice(0, 50));
                   const newCategoryColours = {};
+                  let differences = 5;
                   for (let i = 0; i < data.length; i++) {
                     let percent = i / data.length;
                     let angle = percent * 360;
-                    if (i % 2 == 0) {
-                      angle += 180;
-                    }
+
+                    let mod = i % differences;
+                    angle += (360 / differences) * mod;
                     angle %= 360;
                     let hexColor = hslToHex(angle, 80, 50);
                     newCategoryColours[data[i]] = hexColor;
