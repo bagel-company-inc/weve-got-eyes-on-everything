@@ -127,9 +127,34 @@ export default function CommonModelMap({
     setSelectedId(name);
   };
 
-  type PropertiesType = {
-    name: string;
-  };
+  // Update container size on mount and when container size changes
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const size = { width: rect.width, height: rect.height };
+        setContainerSize(size);
+        containerSizeRef.current = size;
+      }
+    };
+
+    // Initial size
+    updateSize();
+
+    // Use ResizeObserver to track container size changes
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(containerRef.current);
+
+    // Also listen to window resize as fallback
+    window.addEventListener("resize", updateSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, []);
 
   async function fetchVisibleData(vs: any) {
     setLoadingGeoJson(true);
