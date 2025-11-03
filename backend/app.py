@@ -26,12 +26,6 @@ def load_csv_to_gdf(path: str) -> GeoDataFrame:
 
 
 GXP = load_csv_to_gdf(os.path.join(DATA_PATH, "CSTPOS.csv"))
-GXP = concat(
-    [
-        load_csv_to_gdf(os.path.join(DATA_PATH, "CSTPOS.csv")),
-        load_csv_to_gdf(os.path.join(DATA_PATH, "TGAPOS.csv")),
-    ]
-)
 
 
 @cross_origin(origins=["*"])

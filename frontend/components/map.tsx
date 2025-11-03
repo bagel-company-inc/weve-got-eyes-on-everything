@@ -131,35 +131,6 @@ export default function CommonModelMap({
     name: string;
   };
 
-  // Update container size on mount and when container size changes
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const updateSize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const size = { width: rect.width, height: rect.height };
-        setContainerSize(size);
-        containerSizeRef.current = size;
-      }
-    };
-
-    // Initial size
-    updateSize();
-
-    // Use ResizeObserver to track container size changes
-    const resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(containerRef.current);
-
-    // Also listen to window resize as fallback
-    window.addEventListener("resize", updateSize);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateSize);
-    };
-  }, []);
-
   async function fetchVisibleData(vs: any) {
     setLoadingGeoJson(true);
     const size = containerSizeRef.current;
@@ -183,7 +154,9 @@ export default function CommonModelMap({
         { signal: controller.signal }
       );
       const data = await res.json();
-      setGeoJsonData(data);
+      if (!controller.signal.aborted) {
+        setGeoJsonData(data);
+      }
     } catch (err) {
       if (err.name !== "AbortError") {
         console.error("Error fetching visible data:", err);
@@ -244,39 +217,10 @@ export default function CommonModelMap({
       .catch((err) => console.error("Error getting centroid:", err));
   }, [searchBarSelected]);
 
-  const layers = useMemo(() => {
-    if (!geoJsonData) return [];
+  const geojsonLayer = useMemo(() => {
+    if (!geoJsonData) return null;
 
-    const layers_ = [];
-
-    const extremeHighlightedLayer = new GeoJsonLayer<
-      PropertiesType,
-      DataFilterExtensionProps<Feature<Geometry, PropertiesType>>
-    >({
-      id: "extreme-highlight-layer",
-      data: geoJsonData,
-      pickable: false,
-      getFilterCategory: (d) => d.properties.name,
-      filterCategories: [searchBarSelected],
-      getFillColor: [40, 255, 0],
-
-      updateTriggers: {
-        filterCategories: [searchBarSelected],
-      },
-
-      getLineWidth: 10,
-      getPointRadius: 10,
-
-      transitions: {
-        getPointRadius: 300,
-        getLineWidth: 300,
-      },
-
-      extensions: [new DataFilterExtension({ categorySize: 1 })],
-    });
-    // layers_.push(extremeHighlightedLayer);
-
-    const geojsonLayer = new GeoJsonLayer({
+    return new GeoJsonLayer({
       id: "geojson-layer",
       data: geoJsonData,
       pickable: viewState.zoom >= 15,
@@ -320,8 +264,9 @@ export default function CommonModelMap({
           colouringContext.category,
           colouringContext.mapping,
         ],
-        getLineWidth: [selectedId, viewState],
-        pickable: [viewState],
+        getLineWidth: [selectedId, viewState.zoom],
+        getPointRadius: [viewState.zoom],
+        pickable: [viewState.zoom],
       },
 
       transitions: {
@@ -329,16 +274,16 @@ export default function CommonModelMap({
         getLineWidth: 100,
       },
     });
-    layers_.push(geojsonLayer);
-
-    return layers_;
   }, [
     geoJsonData,
     selectedId,
     hoveredId,
+    viewState.zoom,
     colouringContext.category,
     colouringContext.mapping,
   ]);
+
+  const layers = geojsonLayer ? [geojsonLayer] : [];
 
   return (
     <div
@@ -355,8 +300,6 @@ export default function CommonModelMap({
         controller={true}
         layers={layers}
         pickingRadius={10}
-        width={containerSize.width || undefined}
-        height={containerSize.height || undefined}
         onClick={(info) => setSelectedId(info.object?.properties.name)}
         widgets={[
           new FpsWidget({ style: widgetTheme, placement: "top-left" }),
