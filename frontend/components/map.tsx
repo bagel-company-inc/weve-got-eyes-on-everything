@@ -16,6 +16,7 @@ import {
   _ScaleWidget as ScaleWidget,
   DarkGlassTheme,
   LightGlassTheme,
+  _GeocoderWidget as GeocoderWidget,
 } from "@deck.gl/widgets";
 import "@deck.gl/widgets/stylesheet.css";
 import { ColouringContext } from "./colouring";
@@ -90,7 +91,6 @@ export default function CommonModelMap({
   colouringContext,
 }: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
-  const [loadingGeoJson, setLoadingGeoJson] = useState(false);
   const [viewState, setViewState] = useState({
     latitude: -39.059,
     longitude: 174.07,
@@ -147,7 +147,6 @@ export default function CommonModelMap({
   }, []);
 
   async function fetchVisibleData(vs: any) {
-    setLoadingGeoJson(true);
     const size = containerSizeRef.current;
     const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
       vs,
@@ -176,8 +175,6 @@ export default function CommonModelMap({
       if (err.name !== "AbortError") {
         console.error("Error fetching visible data:", err);
       }
-    } finally {
-      setLoadingGeoJson(false);
     }
   }
 
@@ -212,6 +209,7 @@ export default function CommonModelMap({
   ]);
 
   useEffect(() => {
+    if (!searchBarSelected) return;
     selectObject(searchBarSelected);
     fetch(`http://127.0.0.1:5000/api/centroid?name=${searchBarSelected}`)
       .then((response) => response.json())
@@ -223,8 +221,8 @@ export default function CommonModelMap({
         const newViewState = {
           latitude: lat,
           longitude: lon,
-          zoom: viewState.zoom,
-          transitionDuration: 2000,
+          zoom: 18,
+          transitionDuration: 1500,
           transitionInterpolator: new FlyToInterpolator(),
         };
         setViewState(newViewState);
@@ -243,14 +241,16 @@ export default function CommonModelMap({
       getPointRadius: 1 / viewState.zoom,
       lineCapRounded: true,
       lineJointRounded: true,
+      lineWidthUnits: "pixels",
       getLineWidth: (f) => {
-        if (f.properties.name === selectedId) return 0.3;
-        return 1 / viewState.zoom;
+        if (f.properties.name === selectedId) {
+          return 5;
+        }
+        return 1;
       },
-      lineWidthMinPixels: 1,
 
       getLineColor: (f) => {
-        if (f.properties.name === selectedId) return [255, 100, 0];
+        if (f.properties.name === selectedId) return [255, 30, 0];
         if (f.properties.name === hoveredId) return [200, 200, 200];
         if (colouringContext.category in f.properties) {
           const value = f.properties[colouringContext.category];
@@ -318,9 +318,10 @@ export default function CommonModelMap({
         onClick={(info) => setSelectedId(info.object?.properties.name)}
         widgets={[
           new FpsWidget({ style: widgetTheme, placement: "top-left" }),
-          new ScaleWidget({ style: widgetTheme, placement: "bottom-left" }),
+          new ScaleWidget({ style: widgetTheme, placement: "bottom-right" }),
           new CompassWidget({ style: widgetTheme, placement: "top-right" }),
           new ZoomWidget({ style: widgetTheme, placement: "top-right" }),
+          new GeocoderWidget({ style: widgetTheme, placement: "bottom-left" }),
         ]}
         getCursor={(interactiveState) => {
           if (interactiveState.isDragging) return "grabbing";

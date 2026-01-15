@@ -1,6 +1,8 @@
 -r requirements.txt
 
 mypy
+flake8
+
 pandas-stubs
 types-geopandas
 types-Flask-Cors

@@ -46,13 +46,13 @@ export default function Sidebar({
       <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
         <Typography level="title-lg">Common Model Viewer</Typography>
       </Box>
+      <SearchBar onSelectionChange={searchBarSelectionChange} />
       <Tabs>
         <TabList>
           <Tab>Search</Tab>
           <Tab>Colouring</Tab>
         </TabList>
         <TabPanel value={0}>
-          <SearchBar onSelectionChange={searchBarSelectionChange} />
           <AttributeList attributeData={attributeData} />
         </TabPanel>
         <TabPanel value={1}>

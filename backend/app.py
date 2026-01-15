@@ -5,7 +5,7 @@ import msgspec
 from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 
-from pandas import DataFrame, concat, read_csv
+from pandas import read_csv
 from geopandas import GeoDataFrame, GeoSeries
 from shapely import Point
 
@@ -25,7 +25,7 @@ def load_csv_to_gdf(path: str) -> GeoDataFrame:
     return gdf
 
 
-GXP = load_csv_to_gdf(os.path.join(DATA_PATH, "CSTPOS.csv"))
+GXP: GeoDataFrame = load_csv_to_gdf(os.path.join(DATA_PATH, "CSTPOS.csv"))
 
 
 @cross_origin(origins=["*"])

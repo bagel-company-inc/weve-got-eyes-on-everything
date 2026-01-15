@@ -11,4 +11,5 @@ npm install --global yarn
 ```
 yarn install
 npm run
+npm start
 ```

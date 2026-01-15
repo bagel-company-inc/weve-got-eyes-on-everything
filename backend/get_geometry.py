@@ -1,6 +1,5 @@
 from typing import Any, NamedTuple, Self
 
-import msgspec
 import numpy as np
 from numpy.typing import NDArray
 from geopandas import GeoDataFrame, GeoSeries
@@ -104,7 +103,7 @@ def dataframe_to_geojson_features(
             "type": "Feature",
             "geometry": get_geo_interface(
                 row[columns_to_index["geometry"]],
-                coordinates[coordinate_indices[i] : coordinate_indices[i] + coordinate_lengths[i]],
+                coordinates[coordinate_indices[i] : coordinate_indices[i] + coordinate_lengths[i]],  # noqa[E203]
             ),
             "properties": {column: row[columns_to_index[column]] for column in columns},
         }
@@ -122,13 +121,7 @@ def get_fast_coordinates(
     return (coordinates, coordinate_indices, coordinate_lengths)
 
 
-def get_geometry(
-    base_gdf: GeoDataFrame, bounds: Bounds, zoom_level: float, column: str | None
-) -> dict[str, Any]:
-    gdf: GeoDataFrame = simplify_geometry(base_gdf, bounds, zoom_level)
-
-    geometry: GeoDataFrame = find_geometry_within_bounds(gdf, bounds, zoom_level)
-
+def get_geojson_from_gdf(geometry: GeoDataFrame, column: str | None = None) -> dict[str, Any]:
     coordinates, coordinate_indices, coordinate_lengths = get_fast_coordinates(geometry.geometry)
 
     columns: list[str] = ["name"]
@@ -140,3 +133,13 @@ def get_geometry(
     )
 
     return {"type": "FeatureCollection", "features": geojson_dict}
+
+
+def get_geometry(
+    base_gdf: GeoDataFrame, bounds: Bounds, zoom_level: float, column: str | None
+) -> dict[str, Any]:
+    gdf: GeoDataFrame = simplify_geometry(base_gdf, bounds, zoom_level)
+
+    geometry: GeoDataFrame = find_geometry_within_bounds(gdf, bounds, zoom_level)
+
+    return get_geojson_from_gdf(geometry, column)
