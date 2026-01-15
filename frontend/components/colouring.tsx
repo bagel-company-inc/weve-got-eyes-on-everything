@@ -21,13 +21,9 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-type ColourMapping = {
-  [category: string | number]: string;
-};
-
 export type ColouringContext = {
   category: string;
-  mapping: ColourMapping;
+  mapping: Record<string | number, string>;
 };
 
 interface ColouringProps {
@@ -35,15 +31,30 @@ interface ColouringProps {
   setColouringContext: (prev: ColouringContext) => void;
 }
 
+enum ColourPreset {
+  VOLTAGE,
+  OTHER,
+}
+
+const VOLTAGE_COLOUR_PRESET: Record<number, string> = {
+  415: "#6fdd50",
+  3300: "#8bb01c",
+  6600: "#edbd0e",
+  11000: "#e86033",
+  22000: "#0eaaed",
+};
+
 export function Colouring({
   colouringContext,
   setColouringContext,
 }: ColouringProps) {
   const [columnNames, setColumnNames] = React.useState<string[]>([]);
-  const [selectedValue, setSelectedValue] = React.useState<string>("");
+  const [selectedValue, setSelectedValue] = React.useState<string>(
+    colouringContext.category
+  );
   const [categoryValues, setCategoryValues] = React.useState<
     (string | number)[]
-  >([]);
+  >(Object.keys(colouringContext.mapping));
 
   useEffect(() => {
     fetch("http://127.0.0.1:5000/api/column_names")
@@ -124,8 +135,23 @@ export function Colouring({
                 .then((data) => {
                   setCategoryValues(data.slice(0, 50));
                   const newCategoryColours = {};
+
+                  let colour_preset: ColourPreset = ColourPreset.OTHER;
+                  if (column.includes("voltage")) {
+                    colour_preset = ColourPreset.VOLTAGE;
+                  }
+
                   let differences = 5;
+
                   for (let i = 0; i < data.length; i++) {
+                    if (colour_preset == ColourPreset.VOLTAGE) {
+                      if (data[i] in VOLTAGE_COLOUR_PRESET) {
+                        newCategoryColours[data[i]] =
+                          VOLTAGE_COLOUR_PRESET[data[i]];
+                        continue;
+                      }
+                    }
+
                     let percent = i / data.length;
                     let angle = percent * 360;
 

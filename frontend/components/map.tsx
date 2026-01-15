@@ -6,18 +6,9 @@ import React, {
   useState,
 } from "react";
 import { Map } from "react-map-gl/maplibre";
-import {
-  MapView,
-  WebMercatorViewport,
-  Widget,
-  FlyToInterpolator,
-} from "@deck.gl/core";
+import { WebMercatorViewport, FlyToInterpolator } from "@deck.gl/core";
 import { DeckGL } from "@deck.gl/react";
 import { GeoJsonLayer } from "@deck.gl/layers";
-import {
-  DataFilterExtension,
-  DataFilterExtensionProps,
-} from "@deck.gl/extensions";
 import {
   CompassWidget,
   _FpsWidget as FpsWidget,
@@ -27,7 +18,6 @@ import {
   LightGlassTheme,
 } from "@deck.gl/widgets";
 import "@deck.gl/widgets/stylesheet.css";
-import type { Feature, Geometry } from "geojson";
 import { ColouringContext } from "./colouring";
 
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
