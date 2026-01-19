@@ -193,6 +193,7 @@ export default function Hierarchy({
   const [gxps, setGxps] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [selectedLabel, setSelectedLabel] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const loadGxps = async () => {
@@ -250,15 +251,21 @@ export default function Hierarchy({
               key={gxp}
               label={gxp}
               levelLabel="GXP"
-              selectedName={selectedName}
-              onSelect={(name) =>
-                handleSelect({
-                  gxp_code: gxp,
-                  substation_name: null,
-                  hv_feeder_code: null,
-                  dtx_code: null,
-                })
-              }
+              selectedName={selectedLabel}
+              onSelect={(name) => {
+                if (selectedLabel === name) {
+                  setSelectedLabel(null);
+                  handleSelect(null);
+                } else {
+                  setSelectedLabel(name);
+                  handleSelect({
+                    gxp_code: gxp,
+                    substation_name: null,
+                    hv_feeder_code: null,
+                    dtx_code: null,
+                  });
+                }
+              }}
               fetchChildren={() =>
                 fetchValues(
                   `${API_URL}hierarchy?gxp=${encodeURIComponent(gxp)}`
@@ -269,15 +276,21 @@ export default function Hierarchy({
                   key={`${gxp}-${substation}`}
                   label={substation}
                   levelLabel="Substation"
-                  selectedName={selectedName}
-                  onSelect={(name) =>
-                    handleSelect({
-                      gxp_code: gxp,
-                      substation_name: substation,
-                      hv_feeder_code: null,
-                      dtx_code: null,
-                    })
-                  }
+                  selectedName={selectedLabel}
+                  onSelect={(name) => {
+                    if (selectedLabel === name) {
+                      setSelectedLabel(null);
+                      handleSelect(null);
+                    } else {
+                      setSelectedLabel(name);
+                      handleSelect({
+                        gxp_code: gxp,
+                        substation_name: substation,
+                        hv_feeder_code: null,
+                        dtx_code: null,
+                      });
+                    }
+                  }}
                   fetchChildren={() =>
                     fetchValues(
                       `${API_URL}hierarchy?gxp=${encodeURIComponent(
@@ -290,15 +303,21 @@ export default function Hierarchy({
                       key={`${gxp}-${substation}-${hv_feeder}`}
                       label={hv_feeder}
                       levelLabel="HV Feeder"
-                      selectedName={selectedName}
-                      onSelect={(name) =>
-                        handleSelect({
-                          gxp_code: gxp,
-                          substation_name: substation,
-                          hv_feeder_code: hv_feeder,
-                          dtx_code: null,
-                        })
-                      }
+                      selectedName={selectedLabel}
+                      onSelect={(name) => {
+                        if (selectedLabel === name) {
+                          setSelectedLabel(null);
+                          handleSelect(null);
+                        } else {
+                          setSelectedLabel(name);
+                          handleSelect({
+                            gxp_code: gxp,
+                            substation_name: substation,
+                            hv_feeder_code: hv_feeder,
+                            dtx_code: null,
+                          });
+                        }
+                      }}
                       fetchChildren={() =>
                         fetchValues(
                           `${API_URL}hierarchy?gxp=${encodeURIComponent(
@@ -313,15 +332,21 @@ export default function Hierarchy({
                           key={`${gxp}-${substation}-${hv_feeder}-${dtx}`}
                           label={dtx}
                           levelLabel="DTX"
-                          selectedName={selectedName}
-                          onSelect={(name) =>
-                            handleSelect({
-                              gxp_code: gxp,
-                              substation_name: substation,
-                              hv_feeder_code: hv_feeder,
-                              dtx_code: dtx,
-                            })
-                          }
+                          selectedName={selectedLabel}
+                          onSelect={(name) => {
+                            if (selectedLabel === name) {
+                              setSelectedLabel(null);
+                              handleSelect(null);
+                            } else {
+                              setSelectedLabel(name);
+                              handleSelect({
+                                gxp_code: gxp,
+                                substation_name: substation,
+                                hv_feeder_code: hv_feeder,
+                                dtx_code: dtx,
+                              });
+                            }
+                          }}
                         />
                       )}
                     />

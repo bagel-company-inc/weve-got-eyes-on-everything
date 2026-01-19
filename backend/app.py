@@ -149,7 +149,7 @@ def get_hierarchy_level() -> Response:
     dtx_code: str | None = request.args.get("dtx")
     lv_circuit_code: str | None = request.args.get("lv")
 
-    json_values: dict[str, Any] | None = get_hierarchy_json(
+    json_values: dict[str, Any] = get_hierarchy_json(
         GXP,
         gxp_code=gxp_code,
         substation_name=substation_name,
@@ -157,9 +157,6 @@ def get_hierarchy_level() -> Response:
         dtx_code=dtx_code,
         lv_circuit_code=lv_circuit_code,
     )
-
-    if json_values is None:
-        return Response(status=404)
 
     json_bytes: bytes = msgspec.json.encode(json_values)
     response = Response(json_bytes, status=200, mimetype="application/json")

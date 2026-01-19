@@ -57,9 +57,7 @@ class HierarchyOutput(NamedTuple):
     values: list[str]
 
 
-def get_hierarchy(
-    connectivity: GeoDataFrame, hierarchy_input: HierarchyInput
-) -> HierarchyOutput | None:
+def get_hierarchy(connectivity: GeoDataFrame, hierarchy_input: HierarchyInput) -> HierarchyOutput:
     hierarchy_level: HierarchyLevel = HierarchyLevel.GXP
     values: list[str] = []
     if (
@@ -110,9 +108,6 @@ def get_hierarchy(
         df = connectivity[~connectivity.gxp_code.isna()]
         values = df.gxp_code.unique().tolist()
 
-    if len(values) == 0:
-        return None
-
     return HierarchyOutput(hierarchy_level, values)
 
 
@@ -132,7 +127,7 @@ def get_hierarchy_json(
     hv_feeder_code: str | None = None,
     dtx_code: str | None = None,
     lv_circuit_code: str | None = None,
-) -> dict[str, Any] | None:
+) -> dict[str, Any]:
     hierarchy_input: HierarchyInput = HierarchyInput.new(
         gxp_code=gxp_code,
         substation_name=substation_name,
@@ -141,6 +136,4 @@ def get_hierarchy_json(
         lv_circuit_code=lv_circuit_code,
     )
     hierarchy_output: HierarchyOutput | None = get_hierarchy(connectivity, hierarchy_input)
-    if hierarchy_output is None:
-        return None
     return to_hierarchy_json(hierarchy_output)
