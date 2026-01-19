@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from typing import Any, NamedTuple, Self
 
-from pandas import DataFrame
+from geopandas import GeoDataFrame
 
 
 class HierarchyLevel(Enum):
@@ -58,7 +58,7 @@ class HierarchyOutput(NamedTuple):
 
 
 def get_hierarchy(
-    connectivity: DataFrame, hierarchy_input: HierarchyInput
+    connectivity: GeoDataFrame, hierarchy_input: HierarchyInput
 ) -> HierarchyOutput | None:
     hierarchy_level: HierarchyLevel = HierarchyLevel.GXP
     values: list[str] = []
@@ -69,57 +69,46 @@ def get_hierarchy(
         and hierarchy_input.dtx_code
     ):
         hierarchy_level = HierarchyLevel.LV
-        values = (
-            connectivity[
-                (connectivity.gxp_code == hierarchy_input.gxp_code)
-                & (connectivity.substation_name == hierarchy_input.substation_name)
-                & (connectivity.hv_feeder_code == hierarchy_input.hv_feeder_code)
-                & (connectivity.dtx_code == hierarchy_input.dtx_code)
-                & (~connectivity.lv_circuit_code.isna())
-            ]
-            .lv_circuit_code.unique()
-            .tolist()
-        )
+        df = connectivity[
+            (connectivity.gxp_code == hierarchy_input.gxp_code)
+            & (connectivity.substation_name == hierarchy_input.substation_name)
+            & (connectivity.hv_feeder_code == hierarchy_input.hv_feeder_code)
+            & (connectivity.dtx_code == hierarchy_input.dtx_code)
+            & (~connectivity.lv_circuit_code.isna())
+        ]
+        values = df.lv_circuit_code.unique().tolist()
     elif (
         hierarchy_input.gxp_code
         and hierarchy_input.substation_name
         and hierarchy_input.hv_feeder_code
     ):
         hierarchy_level = HierarchyLevel.DTX
-        values = (
-            connectivity[
-                (connectivity.gxp_code == hierarchy_input.gxp_code)
-                & (connectivity.substation_name == hierarchy_input.substation_name)
-                & (connectivity.hv_feeder_code == hierarchy_input.hv_feeder_code)
-                & (~connectivity.dtx_code.isna())
-            ]
-            .dtx_code.unique()
-            .tolist()
-        )
+        df = connectivity[
+            (connectivity.gxp_code == hierarchy_input.gxp_code)
+            & (connectivity.substation_name == hierarchy_input.substation_name)
+            & (connectivity.hv_feeder_code == hierarchy_input.hv_feeder_code)
+            & (~connectivity.dtx_code.isna())
+        ]
+        values = df.dtx_code.unique().tolist()
     elif hierarchy_input.gxp_code and hierarchy_input.substation_name:
         hierarchy_level = HierarchyLevel.HV
-        values = (
-            connectivity[
-                (connectivity.gxp_code == hierarchy_input.gxp_code)
-                & (connectivity.substation_name == hierarchy_input.substation_name)
-                & (~connectivity.hv_feeder_code.isna())
-            ]
-            .hv_feeder_code.unique()
-            .tolist()
-        )
+        df = connectivity[
+            (connectivity.gxp_code == hierarchy_input.gxp_code)
+            & (connectivity.substation_name == hierarchy_input.substation_name)
+            & (~connectivity.hv_feeder_code.isna())
+        ]
+        values = df.hv_feeder_code.unique().tolist()
     elif hierarchy_input.gxp_code:
         hierarchy_level = HierarchyLevel.SUBSTATION
-        values = (
-            connectivity[
-                (connectivity.gxp_code == hierarchy_input.gxp_code)
-                & (~connectivity.substation_name.isna())
-            ]
-            .substation_name.unique()
-            .tolist()
-        )
+        df = connectivity[
+            (connectivity.gxp_code == hierarchy_input.gxp_code)
+            & (~connectivity.substation_name.isna())
+        ]
+        values = df.substation_name.unique().tolist()
     else:
         hierarchy_level = HierarchyLevel.GXP
-        values = connectivity[~connectivity.gxp_code.isna()].gxp_code.unique().tolist()
+        df = connectivity[~connectivity.gxp_code.isna()]
+        values = df.gxp_code.unique().tolist()
 
     if len(values) == 0:
         return None
@@ -137,7 +126,7 @@ def to_hierarchy_json(hierarchy_output: HierarchyOutput) -> dict[str, Any]:
 
 
 def get_hierarchy_json(
-    connectivity: DataFrame,
+    connectivity: GeoDataFrame,
     gxp_code: str | None = None,
     substation_name: str | None = None,
     hv_feeder_code: str | None = None,

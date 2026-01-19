@@ -146,21 +146,19 @@ def get_geometry(
     dtx_code: str | None = None,
     lv_circuit_code: str | None = None,
 ) -> dict[str, Any]:
-    mask = True
-    # mask: Series = ~base_gdf["gxp_code"].isna()
-    # if gxp_code is not None:
-    #     mask &= base_gdf["gxp_code"] == gxp_code
-    # if substation_name is not None:
-    #     mask &= base_gdf["substation_name"] == substation_name
-    # if hv_feeder_code is not None:
-    #     mask &= base_gdf["hv_feeder_code"] == hv_feeder_code
-    # if dtx_code is not None:
-    #     mask &= base_gdf["dtx_code"] == dtx_code
-    # if lv_circuit_code is not None:
-    #     mask &= base_gdf["lv_circuit_code"] == lv_circuit_code
-
     gdf: GeoDataFrame = simplify_geometry(base_gdf, bounds, zoom_level)
 
     geometry: GeoDataFrame = find_geometry_within_bounds(gdf, bounds, zoom_level)
+    mask = ~geometry["gxp_code"].isna()
+    if gxp_code is not None:
+        mask &= geometry["gxp_code"] == gxp_code
+    if substation_name is not None:
+        mask &= geometry["substation_name"] == substation_name
+    if hv_feeder_code is not None:
+        mask &= geometry["hv_feeder_code"] == hv_feeder_code
+    if dtx_code is not None:
+        mask &= geometry["dtx_code"] == dtx_code
+    if lv_circuit_code is not None:
+        mask &= geometry["lv_circuit_code"] == lv_circuit_code
 
-    return get_geojson_from_gdf(geometry, column)
+    return get_geojson_from_gdf(geometry[mask], column)
