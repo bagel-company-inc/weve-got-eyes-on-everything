@@ -11,18 +11,23 @@ import AttributeList from "./attribute_list";
 import { Colouring, ColouringContext } from "./colouring";
 import SearchBar from "./search_bar";
 import Hierarchy from "./hierarchy";
+import { HierarchyView } from "./hierarchy";
 
 interface SidebarProps {
   attributeData: Record<string, any> | null;
   searchBarSelectionChange?: (name: string | null) => void;
+  selectedName?: string | null;
+  setHierarchyView?: (hierarchy_view: HierarchyView | null) => void;
   width?: number;
   colouringContext: ColouringContext;
-  setColouringContext: (prev: ColouringContext) => ColouringContext;
+  setColouringContext: React.Dispatch<React.SetStateAction<ColouringContext>>;
 }
 
 export default function Sidebar({
   attributeData,
   searchBarSelectionChange,
+  selectedName,
+  setHierarchyView,
   width = 260,
   colouringContext,
   setColouringContext,
@@ -64,7 +69,10 @@ export default function Sidebar({
           />
         </TabPanel>
         <TabPanel value={2}>
-          <Hierarchy />
+          <Hierarchy
+            onSelectionChange={setHierarchyView}
+            selectedName={selectedName}
+          />
         </TabPanel>
       </Tabs>
     </Sheet>

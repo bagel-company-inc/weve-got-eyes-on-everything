@@ -7,19 +7,20 @@ import Box from "@mui/joy/Box";
 import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
 import { ColouringContext } from "./components/colouring";
+import { HierarchyView } from "./components/hierarchy";
 
 export default function CommonModelViewer() {
   const [attributeData, setAttributeData] = React.useState<Record<
     string,
     any
   > | null>(null);
+  const [hierarchyView, setHierarchyView] =
+    React.useState<HierarchyView | null>(null);
   const [searchBarSelectedName, setSearchBarSelectedName] = React.useState<
     string | null
   >(null);
   const [sidebarWidth, setSidebarWidth] = React.useState(300);
   const [isResizing, setIsResizing] = React.useState(false);
-
-  const searchBarSelectionChange = React.useCallback(() => {}, []);
 
   const [colouringContext, setColouringContext] =
     React.useState<ColouringContext>({ category: "", mapping: {} });
@@ -68,6 +69,8 @@ export default function CommonModelViewer() {
         <Sidebar
           attributeData={attributeData}
           searchBarSelectionChange={setSearchBarSelectedName}
+          selectedName={searchBarSelectedName}
+          setHierarchyView={setHierarchyView}
           width={sidebarWidth}
           colouringContext={colouringContext}
           setColouringContext={setColouringContext}
@@ -96,6 +99,7 @@ export default function CommonModelViewer() {
         >
           <CommonModelMap
             onAttributeDataChange={setAttributeData}
+            hierarchyView={hierarchyView}
             searchBarSelected={searchBarSelectedName}
             colouringContext={colouringContext}
           />

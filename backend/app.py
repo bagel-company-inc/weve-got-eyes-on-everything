@@ -111,11 +111,28 @@ def get_geojson() -> Response:
     bbox_param: str | None = request.args.get("bbox")
     if not bbox_param:
         return app.response_class("[]")
+
+    gxp_code: str | None = request.args.get("gxp")
+    substation_name: str | None = request.args.get("substation")
+    hv_feeder_code: str | None = request.args.get("hv")
+    dtx_code: str | None = request.args.get("dtx")
+    lv_circuit_code: str | None = request.args.get("lv")
+
     bounds: Bounds = Bounds.parse(bbox_param)
     zoom_level: float = float(request.args.get("zoom", "14"))
     column: str | None = request.args.get("column")
 
-    geojson_dict: dict[str, Any] = get_geometry(GXP, bounds, zoom_level, column)
+    geojson_dict: dict[str, Any] = get_geometry(
+        GXP,
+        bounds,
+        zoom_level,
+        column,
+        gxp_code=gxp_code,
+        substation_name=substation_name,
+        hv_feeder_code=hv_feeder_code,
+        dtx_code=dtx_code,
+        lv_circuit_code=lv_circuit_code,
+    )
 
     json_bytes: bytes = msgspec.json.encode(geojson_dict)
     response = Response(json_bytes, status=200, mimetype="application/json")

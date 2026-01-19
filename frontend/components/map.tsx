@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { Map } from "react-map-gl/maplibre";
-import { WebMercatorViewport, FlyToInterpolator } from "@deck.gl/core";
+import { WebMercatorViewport, FlyToInterpolator, Color } from "@deck.gl/core";
 import { DeckGL } from "@deck.gl/react";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@deck.gl/widgets";
 import "@deck.gl/widgets/stylesheet.css";
 import { ColouringContext } from "./colouring";
+import { HierarchyView } from "./hierarchy";
 
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 const widgetTheme = prefersDarkScheme.matches
@@ -81,12 +82,23 @@ function getCurrentBounds(
 
 interface CommonModelMapProps {
   onAttributeDataChange?: (data: Record<string, any> | null) => void;
+  hierarchyView?: HierarchyView;
   searchBarSelected?: string | null;
   colouringContext: ColouringContext;
 }
 
+type PropertiesType = {
+  name: string;
+  colour: Color;
+  gxp_code: string;
+  substation_name: string | null;
+  hv_feeder_code: string | null;
+  dtx_code: string | null;
+};
+
 export default function CommonModelMap({
   onAttributeDataChange,
+  hierarchyView,
   searchBarSelected,
   colouringContext,
 }: CommonModelMapProps) {
@@ -146,7 +158,7 @@ export default function CommonModelMap({
     };
   }, []);
 
-  async function fetchVisibleData(vs: any) {
+  async function fetchVisibleData(vs: any, hv: HierarchyView | null) {
     const size = containerSizeRef.current;
     const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
       vs,
@@ -162,11 +174,23 @@ export default function CommonModelMap({
     const controller = new AbortController();
     currentAbortController.current = controller;
 
+    let url = `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`;
+
+    if (hv?.gxp_code) {
+      url += `&gxp=${hv.gxp_code}`;
+    }
+    if (hv?.substation_name) {
+      url += `&substation=${hv.substation_name}`;
+    }
+    if (hv?.hv_feeder_code) {
+      url += `&hv=${hv.hv_feeder_code}`;
+    }
+    if (hv?.dtx_code) {
+      url += `&dtx=${hv.dtx_code}`;
+    }
+
     try {
-      const res = await fetch(
-        `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`,
-        { signal: controller.signal }
-      );
+      const res = await fetch(url, { signal: controller.signal });
       const data = await res.json();
       if (!controller.signal.aborted) {
         setGeoJsonData(data);
@@ -192,20 +216,21 @@ export default function CommonModelMap({
 
   const handleViewChange = ({ viewState: vs }: any) => {
     setViewState(vs);
-    throttledFetch(vs);
-    debouncedFetch(vs);
+    throttledFetch(vs, hierarchyView);
+    debouncedFetch(vs, hierarchyView);
   };
 
   // Initial fetch
   useEffect(() => {
     if (containerSize.width > 0 && containerSize.height > 0) {
-      fetchVisibleData(viewState);
+      fetchVisibleData(viewState, hierarchyView);
     }
   }, [
     containerSize.width,
     containerSize.height,
     colouringContext.category,
     colouringContext.mapping,
+    hierarchyView,
   ]);
 
   useEffect(() => {
@@ -233,7 +258,7 @@ export default function CommonModelMap({
   const geojsonLayer = useMemo(() => {
     if (!geoJsonData) return null;
 
-    return new GeoJsonLayer({
+    return new GeoJsonLayer<PropertiesType>({
       id: "geojson-layer",
       data: geoJsonData,
       pickable: viewState.zoom >= 15,
