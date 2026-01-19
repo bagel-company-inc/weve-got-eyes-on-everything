@@ -10,6 +10,7 @@ import Sheet from "@mui/joy/Sheet";
 import AttributeList from "./attribute_list";
 import { Colouring, ColouringContext } from "./colouring";
 import SearchBar from "./search_bar";
+import Hierarchy from "./hierarchy";
 
 interface SidebarProps {
   attributeData: Record<string, any> | null;
@@ -49,8 +50,9 @@ export default function Sidebar({
       <SearchBar onSelectionChange={searchBarSelectionChange} />
       <Tabs>
         <TabList>
-          <Tab>Search</Tab>
+          <Tab>Attributes</Tab>
           <Tab>Colouring</Tab>
+          <Tab>Hierarchy</Tab>
         </TabList>
         <TabPanel value={0}>
           <AttributeList attributeData={attributeData} />
@@ -60,6 +62,9 @@ export default function Sidebar({
             colouringContext={colouringContext}
             setColouringContext={setColouringContext}
           />
+        </TabPanel>
+        <TabPanel value={2}>
+          <Hierarchy />
         </TabPanel>
       </Tabs>
     </Sheet>

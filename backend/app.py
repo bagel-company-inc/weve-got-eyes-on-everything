@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Literal
 
 import msgspec
 from flask import Flask, request, Response
@@ -10,6 +10,7 @@ from geopandas import GeoDataFrame, GeoSeries
 from shapely import Point
 
 from get_geometry import Bounds, get_geometry
+from hierarchy import get_hierarchy_json
 
 app = Flask(__name__)
 CORS(app)
@@ -119,6 +120,32 @@ def get_geojson() -> Response:
     json_bytes: bytes = msgspec.json.encode(geojson_dict)
     response = Response(json_bytes, status=200, mimetype="application/json")
 
+    return response
+
+
+@cross_origin(origins=["*"])
+@app.route("/api/hierarchy", methods=["GET", "OPTIONS"])
+def get_hierarchy_level() -> Response:
+    gxp_code: str | None = request.args.get("gxp")
+    substation_name: str | None = request.args.get("substation")
+    hv_feeder_code: str | None = request.args.get("hv")
+    dtx_code: str | None = request.args.get("dtx")
+    lv_circuit_code: str | None = request.args.get("lv")
+
+    json_values: dict[str, Any] | None = get_hierarchy_json(
+        GXP,
+        gxp_code=gxp_code,
+        substation_name=substation_name,
+        hv_feeder_code=hv_feeder_code,
+        dtx_code=dtx_code,
+        lv_circuit_code=lv_circuit_code,
+    )
+
+    if json_values is None:
+        return Response(status=404)
+
+    json_bytes: bytes = msgspec.json.encode(json_values)
+    response = Response(json_bytes, status=200, mimetype="application/json")
     return response
 
 

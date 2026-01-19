@@ -16,7 +16,7 @@ export default function CommonModelViewer() {
   const [searchBarSelectedName, setSearchBarSelectedName] = React.useState<
     string | null
   >(null);
-  const [sidebarWidth, setSidebarWidth] = React.useState(260);
+  const [sidebarWidth, setSidebarWidth] = React.useState(300);
   const [isResizing, setIsResizing] = React.useState(false);
 
   const searchBarSelectionChange = React.useCallback(() => {}, []);
