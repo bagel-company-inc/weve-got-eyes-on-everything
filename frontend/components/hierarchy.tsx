@@ -6,6 +6,7 @@ import ListItemButton from "@mui/joy/ListItemButton";
 import Typography from "@mui/joy/Typography";
 import CircularProgress from "@mui/joy/CircularProgress";
 import Stack from "@mui/joy/Stack";
+import { API_URL } from "../api_url";
 
 export type HierarchyView = {
   gxp_code: string;
@@ -13,8 +14,6 @@ export type HierarchyView = {
   hv_feeder_code: string | null;
   dtx_code: string | null;
 };
-
-const API_BASE = "http://127.0.0.1:5000";
 
 async function fetchValues(url: string): Promise<string[]> {
   const response = await fetch(url);
@@ -198,7 +197,7 @@ export default function Hierarchy({
   React.useEffect(() => {
     const loadGxps = async () => {
       try {
-        const values = await fetchValues(`${API_BASE}/api/hierarchy`);
+        const values = await fetchValues(`${API_URL}hierarchy`);
         setGxps(values);
       } catch (err: any) {
         setError(err?.message ?? "Unable to load hierarchy");
@@ -212,7 +211,7 @@ export default function Hierarchy({
 
   const handleSelect = React.useCallback(
     (hierarchy_view: HierarchyView | null) => {
-       onSelectionChange?.(hierarchy_view);
+      onSelectionChange?.(hierarchy_view);
     },
     [onSelectionChange]
   );
@@ -262,7 +261,7 @@ export default function Hierarchy({
               }
               fetchChildren={() =>
                 fetchValues(
-                  `${API_BASE}/api/hierarchy?gxp=${encodeURIComponent(gxp)}`
+                  `${API_URL}hierarchy?gxp=${encodeURIComponent(gxp)}`
                 )
               }
               renderChild={(substation) => (
@@ -281,7 +280,7 @@ export default function Hierarchy({
                   }
                   fetchChildren={() =>
                     fetchValues(
-                      `${API_BASE}/api/hierarchy?gxp=${encodeURIComponent(
+                      `${API_URL}hierarchy?gxp=${encodeURIComponent(
                         gxp
                       )}&substation=${encodeURIComponent(substation)}`
                     )
@@ -302,7 +301,7 @@ export default function Hierarchy({
                       }
                       fetchChildren={() =>
                         fetchValues(
-                          `${API_BASE}/api/hierarchy?gxp=${encodeURIComponent(
+                          `${API_URL}hierarchy?gxp=${encodeURIComponent(
                             gxp
                           )}&substation=${encodeURIComponent(
                             substation
@@ -320,7 +319,7 @@ export default function Hierarchy({
                               gxp_code: gxp,
                               substation_name: substation,
                               hv_feeder_code: hv_feeder,
-                               dtx_code: dtx,
+                              dtx_code: dtx,
                             })
                           }
                         />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Autocomplete from "@mui/joy/Autocomplete";
+import { API_URL } from "../api_url";
 
 interface SearchBarProps {
   onSelectionChange?: (name: string | null) => void;
@@ -20,9 +21,7 @@ export default function SearchBar({ onSelectionChange }: SearchBarProps) {
       setLoading(true);
       try {
         const response = await fetch(
-          `http://127.0.0.1:5000/api/search_complete?input=${encodeURIComponent(
-            inputValue
-          )}`
+          `${API_URL}search_complete?input=${encodeURIComponent(inputValue)}`
         );
         const data = await response.json();
         setOptions(data.slice(0, 100));

@@ -7,6 +7,7 @@ import List from "@mui/joy/List";
 import ListItem from "@mui/joy/ListItem";
 import Typography from "@mui/joy/Typography";
 import ColorfulPopup from "./colourful_popup";
+import { API_URL } from "../api_url";
 
 function hslToHex(h: number, s: number, l: number): string {
   l /= 100;
@@ -57,7 +58,7 @@ export function Colouring({
   >(Object.keys(colouringContext.mapping));
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/column_names")
+    fetch(`${API_URL}column_names`)
       .then((response) => response.json())
       .then((data) => {
         if (!data) return;
@@ -128,9 +129,7 @@ export function Colouring({
             value={column}
             onClick={() => {
               setSelectedValue(column);
-              fetch(
-                `http://127.0.0.1:5000/api/column_unique_values?column=${column}`
-              )
+              fetch(`${API_URL}column_unique_values?column=${column}`)
                 .then((response) => response.json())
                 .then((data) => {
                   setCategoryValues(data.slice(0, 50));

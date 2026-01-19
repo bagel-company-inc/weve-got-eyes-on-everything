@@ -21,6 +21,7 @@ import {
 import "@deck.gl/widgets/stylesheet.css";
 import { ColouringContext } from "./colouring";
 import { HierarchyView } from "./hierarchy";
+import { API_URL } from "../api_url";
 
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 const widgetTheme = prefersDarkScheme.matches
@@ -117,7 +118,7 @@ export default function CommonModelMap({
 
   const selectObject = (name: string) => {
     if (!name) return;
-    fetch(`http://127.0.0.1:5000/api/attributes?name=${name}`)
+    fetch(`${API_URL}attributes?name=${name}`)
       .then((response) => response.json())
       .then((data) => {
         if (onAttributeDataChange) {
@@ -174,7 +175,7 @@ export default function CommonModelMap({
     const controller = new AbortController();
     currentAbortController.current = controller;
 
-    let url = `http://127.0.0.1:5000/api/geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`;
+    let url = `${API_URL}geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`;
 
     if (hv?.gxp_code) {
       url += `&gxp=${hv.gxp_code}`;
@@ -236,7 +237,7 @@ export default function CommonModelMap({
   useEffect(() => {
     if (!searchBarSelected) return;
     selectObject(searchBarSelected);
-    fetch(`http://127.0.0.1:5000/api/centroid?name=${searchBarSelected}`)
+    fetch(`${API_URL}centroid?name=${searchBarSelected}`)
       .then((response) => response.json())
       .then((data) => {
         if (!data) return;
