@@ -1,5 +1,5 @@
 from pandas import DataFrame
-from networkx import NetworkXNoPath, MultiGraph, shortest_path
+from networkx import NetworkXNoPath, NodeNotFound, MultiGraph, shortest_path
 
 
 def connectivity_to_graph(connectivity: DataFrame, attributes: bool = False) -> MultiGraph:
@@ -23,14 +23,14 @@ def connectivity_to_graph(connectivity: DataFrame, attributes: bool = False) -> 
 def graph_shortest_path(node_a: str, node_b: str, graph: MultiGraph) -> list[str]:
     try:
         node_path: list[str] = shortest_path(graph, node_a, node_b)
-        edge_path: list[str] = []
-        for i, current_node in enumerate(node_path):
-            if i == 0:
-                continue
-            previous_node: str = node_path[i - 1]
-            edges: list[str] = list(graph.get_edge_data(current_node, previous_node).keys())
-            edge: str = edges[0]
-            edge_path.append(edge)
-        return edge_path
-    except NetworkXNoPath:
+    except NetworkXNoPath, NodeNotFound:
         return []
+    edge_path: list[str] = []
+    for i, current_node in enumerate(node_path):
+        if i == 0:
+            continue
+        previous_node: str = node_path[i - 1]
+        edges: list[str] = list(graph.get_edge_data(current_node, previous_node).keys())
+        edge: str = edges[0]
+        edge_path.append(edge)
+    return edge_path
