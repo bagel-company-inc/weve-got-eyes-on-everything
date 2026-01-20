@@ -23,7 +23,7 @@ def connectivity_to_graph(connectivity: DataFrame, attributes: bool = False) -> 
 def graph_shortest_path(node_a: str, node_b: str, graph: MultiGraph) -> list[str]:
     try:
         node_path: list[str] = shortest_path(graph, node_a, node_b)
-    except NetworkXNoPath, NodeNotFound:
+    except (NetworkXNoPath, NodeNotFound):
         return []
     edge_path: list[str] = []
     for i, current_node in enumerate(node_path):
