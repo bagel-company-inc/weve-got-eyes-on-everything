@@ -30,6 +30,8 @@ interface SidebarProps {
   setPathFromInputValue?: React.Dispatch<React.SetStateAction<string>>;
   pathToInputValue?: string;
   setPathToInputValue?: React.Dispatch<React.SetStateAction<string>>;
+  excludedEdges?: string[];
+  setExcludedEdges?: React.Dispatch<React.SetStateAction<string[]>>;
   pathNotFound?: boolean;
   pathLoading?: boolean;
   activeTab?: number;
@@ -52,6 +54,8 @@ export default function Sidebar({
   setPathFromInputValue,
   pathToInputValue = "",
   setPathToInputValue,
+  excludedEdges = [],
+  setExcludedEdges,
   pathNotFound = false,
   pathLoading = false,
   activeTab = 0,
@@ -113,6 +117,8 @@ export default function Sidebar({
             setPathFromInputValue={setPathFromInputValue}
             pathToInputValue={pathToInputValue}
             setPathToInputValue={setPathToInputValue}
+            excludedEdges={excludedEdges}
+            setExcludedEdges={setExcludedEdges}
             pathNotFound={pathNotFound}
             pathLoading={pathLoading}
           />

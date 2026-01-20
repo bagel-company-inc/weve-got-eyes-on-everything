@@ -5,14 +5,13 @@ import msgspec
 from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 
-from networkx import MultiGraph
 from pandas import read_csv
 from geopandas import GeoDataFrame, GeoSeries
 from shapely import Point
 
 from get_geometry import Bounds, get_geometry
 from hierarchy import get_hierarchy_json
-from graph import connectivity_to_graph, graph_shortest_path
+from graph import ConnectivityGraph, connectivity_to_graph, graph_shortest_path
 
 app = Flask(__name__)
 CORS(app)
@@ -29,7 +28,7 @@ def load_csv_to_gdf(path: str) -> GeoDataFrame:
 
 
 GXP: GeoDataFrame = load_csv_to_gdf(os.path.join(DATA_PATH, "CSTPOS.csv"))
-G: MultiGraph = connectivity_to_graph(GXP)
+graph: ConnectivityGraph = connectivity_to_graph(GXP)
 
 
 @cross_origin(origins=["*"])
@@ -174,7 +173,12 @@ def get_shortest_path() -> Response:
     if node_a is None or node_b is None:
         return app.response_class("[]")
 
-    json_values: list[str] = graph_shortest_path(node_a, node_b, G)
+    exclude: str | None = request.args.get("exclude")
+    edges_to_exclude: list[str] = []
+    if exclude is not None:
+        edges_to_exclude = exclude.split(",")
+
+    json_values: list[str] = graph_shortest_path(node_a, node_b, graph, edges_to_exclude)
     json_bytes: bytes = msgspec.json.encode(json_values)
     response = Response(json_bytes, status=200, mimetype="application/json")
     return response

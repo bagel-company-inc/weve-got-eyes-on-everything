@@ -29,6 +29,7 @@ export default function CommonModelViewer() {
   const [pathToNode, setPathToNode] = React.useState<string | null>(null);
   const [pathFromInputValue, setPathFromInputValue] = React.useState("");
   const [pathToInputValue, setPathToInputValue] = React.useState("");
+  const [excludedEdges, setExcludedEdges] = React.useState<string[]>([]);
   const [pathEdges, setPathEdges] = React.useState<Set<string>>(new Set());
   const [pathNotFound, setPathNotFound] = React.useState(false);
   const [pathLoading, setPathLoading] = React.useState(false);
@@ -45,6 +46,11 @@ export default function CommonModelViewer() {
 
   // Fetch shortest path when both input fields have values
   React.useEffect(() => {
+    // Reset state immediately when inputs change
+    setPathNotFound(false);
+    setPathLoading(false);
+    setPathEdges(new Set());
+
     if (
       pathFromInputValue.trim() &&
       pathToInputValue.trim() &&
@@ -52,27 +58,48 @@ export default function CommonModelViewer() {
     ) {
       setPathLoading(true);
       setPathNotFound(false);
-      fetch(
-        `${API_URL}shortest_path?a=${encodeURIComponent(pathFromInputValue.trim())}&b=${encodeURIComponent(pathToInputValue.trim())}`,
-      )
+      let url = `${API_URL}shortest_path?a=${encodeURIComponent(pathFromInputValue.trim())}&b=${encodeURIComponent(pathToInputValue.trim())}`;
+      if (excludedEdges.length > 0) {
+        const excludedString = excludedEdges
+          .map((edge) => edge.trim())
+          .filter((edge) => edge.length > 0)
+          .join(",");
+        if (excludedString) {
+          url += `&exclude=${encodeURIComponent(excludedString)}`;
+        }
+      }
+      
+      const abortController = new AbortController();
+      
+      fetch(url, { signal: abortController.signal })
         .then((response) => response.json())
         .then((data: string[]) => {
-          setPathEdges(new Set(data));
-          setPathNotFound(data.length === 0);
-          setPathLoading(false);
+          // Only update state if this request hasn't been aborted
+          if (!abortController.signal.aborted) {
+            setPathEdges(new Set(data));
+            setPathNotFound(data.length === 0);
+            setPathLoading(false);
+          }
         })
         .catch((err) => {
+          // Ignore abort errors
+          if (err.name === "AbortError") {
+            return;
+          }
           console.error("Error getting shortest path:", err);
-          setPathEdges(new Set());
-          setPathNotFound(false);
-          setPathLoading(false);
+          if (!abortController.signal.aborted) {
+            setPathEdges(new Set());
+            setPathNotFound(false);
+            setPathLoading(false);
+          }
         });
-    } else {
-      setPathEdges(new Set());
-      setPathNotFound(false);
-      setPathLoading(false);
+
+      // Cleanup: abort the request if inputs change before it completes
+      return () => {
+        abortController.abort();
+      };
     }
-  }, [pathFromInputValue, pathToInputValue]);
+  }, [pathFromInputValue, pathToInputValue, excludedEdges]);
 
   const handleMouseDown = React.useCallback(() => {
     setIsResizing(true);
@@ -82,7 +109,6 @@ export default function CommonModelViewer() {
     (e: MouseEvent) => {
       if (!isResizing) return;
       const newWidth = e.clientX;
-      console.log(newWidth);
       const constrainedWidth = Math.max(380, Math.min(600, newWidth));
       setSidebarWidth(constrainedWidth);
     },
@@ -131,6 +157,8 @@ export default function CommonModelViewer() {
           setPathFromInputValue={setPathFromInputValue}
           pathToInputValue={pathToInputValue}
           setPathToInputValue={setPathToInputValue}
+          excludedEdges={excludedEdges}
+          setExcludedEdges={setExcludedEdges}
           pathNotFound={pathNotFound}
           pathLoading={pathLoading}
           activeTab={activeTab}

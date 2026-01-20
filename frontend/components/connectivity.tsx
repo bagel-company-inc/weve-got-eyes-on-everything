@@ -3,6 +3,10 @@ import Box from "@mui/joy/Box";
 import Typography from "@mui/joy/Typography";
 import Autocomplete from "@mui/joy/Autocomplete";
 import Alert from "@mui/joy/Alert";
+import Input from "@mui/joy/Input";
+import IconButton from "@mui/joy/IconButton";
+import Add from "@mui/icons-material/Add";
+import Delete from "@mui/icons-material/Delete";
 import { API_URL } from "../api_url";
 
 interface ConnectivityProps {
@@ -14,6 +18,8 @@ interface ConnectivityProps {
   setPathFromInputValue?: React.Dispatch<React.SetStateAction<string>>;
   pathToInputValue?: string;
   setPathToInputValue?: React.Dispatch<React.SetStateAction<string>>;
+  excludedEdges?: string[];
+  setExcludedEdges?: React.Dispatch<React.SetStateAction<string[]>>;
   pathNotFound?: boolean;
   pathLoading?: boolean;
 }
@@ -27,6 +33,8 @@ export default function Connectivity({
   setPathFromInputValue,
   pathToInputValue = "",
   setPathToInputValue,
+  excludedEdges = [],
+  setExcludedEdges,
   pathNotFound = false,
   pathLoading = false,
 }: ConnectivityProps) {
@@ -168,6 +176,77 @@ export default function Connectivity({
         filterOptions={(opts) => opts}
         getOptionLabel={(option) => (typeof option === "string" ? option : "")}
       />
+
+      <Box>
+        <Typography level="body-sm" sx={{ mb: 0.5 }}>
+          Excluded Edges
+        </Typography>
+        {(excludedEdges.length === 0 ? [""] : excludedEdges).map(
+          (edge, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: "flex",
+                gap: 0.5,
+                mb: 0.5,
+                alignItems: "center",
+              }}
+            >
+              <Input
+                value={edge}
+                onChange={(e) => {
+                  if (setExcludedEdges) {
+                    const currentEdges =
+                      excludedEdges.length === 0 ? [""] : excludedEdges;
+                    const newEdges = [...currentEdges];
+                    newEdges[index] = e.target.value;
+                    setExcludedEdges(newEdges);
+                  }
+                }}
+                placeholder="Edge name..."
+                size="sm"
+                sx={{ flex: 1 }}
+              />
+              {(excludedEdges.length > 0 || index > 0) && (
+                <IconButton
+                  size="sm"
+                  variant="plain"
+                  color="danger"
+                  onClick={() => {
+                    if (setExcludedEdges) {
+                      const currentEdges =
+                        excludedEdges.length === 0 ? [""] : excludedEdges;
+                      const newEdges = currentEdges.filter(
+                        (_, i) => i !== index
+                      );
+                      setExcludedEdges(newEdges);
+                    }
+                  }}
+                >
+                  <Delete />
+                </IconButton>
+              )}
+            </Box>
+          )
+        )}
+        <IconButton
+          size="sm"
+          variant="outlined"
+          onClick={() => {
+            if (setExcludedEdges) {
+              const currentEdges =
+                excludedEdges.length === 0 ? [""] : excludedEdges;
+              setExcludedEdges([...currentEdges, ""]);
+            }
+          }}
+          sx={{ mt: 0.5 }}
+        >
+          <Add />
+          <Typography level="body-xs" sx={{ ml: 0.5 }}>
+            Add Edge
+          </Typography>
+        </IconButton>
+      </Box>
 
       {pathLoading && (
         <Typography level="body-xs" sx={{ color: "text.secondary" }}>
