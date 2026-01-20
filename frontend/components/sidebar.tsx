@@ -6,13 +6,13 @@ import TabList from "@mui/joy/TabList";
 import TabPanel from "@mui/joy/TabPanel";
 import Typography from "@mui/joy/Typography";
 import Sheet from "@mui/joy/Sheet";
-import Switch from "@mui/joy/Switch";
 
 import AttributeList from "./attribute_list";
 import { Colouring, ColouringContext } from "./colouring";
 import SearchBar from "./search_bar";
 import Hierarchy from "./hierarchy";
 import { HierarchyView } from "./hierarchy";
+import Connectivity from "./connectivity";
 
 interface SidebarProps {
   attributeData: Record<string, any> | null;
@@ -22,8 +22,18 @@ interface SidebarProps {
   width?: number;
   colouringContext: ColouringContext;
   setColouringContext: React.Dispatch<React.SetStateAction<ColouringContext>>;
-  shortestPathMode?: boolean;
-  setShortestPathMode?: React.Dispatch<React.SetStateAction<boolean>>;
+  pathFromNode?: string | null;
+  setPathFromNode?: React.Dispatch<React.SetStateAction<string | null>>;
+  pathToNode?: string | null;
+  setPathToNode?: React.Dispatch<React.SetStateAction<string | null>>;
+  pathFromInputValue?: string;
+  setPathFromInputValue?: React.Dispatch<React.SetStateAction<string>>;
+  pathToInputValue?: string;
+  setPathToInputValue?: React.Dispatch<React.SetStateAction<string>>;
+  pathNotFound?: boolean;
+  pathLoading?: boolean;
+  activeTab?: number;
+  setActiveTab?: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export default function Sidebar({
@@ -34,8 +44,18 @@ export default function Sidebar({
   width = 260,
   colouringContext,
   setColouringContext,
-  shortestPathMode = false,
-  setShortestPathMode,
+  pathFromNode = null,
+  setPathFromNode,
+  pathToNode = null,
+  setPathToNode,
+  pathFromInputValue = "",
+  setPathFromInputValue,
+  pathToInputValue = "",
+  setPathToInputValue,
+  pathNotFound = false,
+  pathLoading = false,
+  activeTab = 0,
+  setActiveTab,
 }: SidebarProps) {
   return (
     <Sheet
@@ -57,35 +77,16 @@ export default function Sidebar({
       <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
         <Typography level="title-lg">Common Model Viewer</Typography>
       </Box>
-      {setShortestPathMode && (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            p: 1,
-            borderRadius: "sm",
-            bgcolor: shortestPathMode ? "primary.50" : "background.surface",
-            border: "1px solid",
-            borderColor: shortestPathMode ? "primary.200" : "divider",
-          }}
-        >
-          <Switch
-            checked={shortestPathMode}
-            onChange={(e) => setShortestPathMode(e.target.checked)}
-            sx={{ mr: 1 }}
-          />
-          <Typography level="body-sm">
-            Shortest Path Mode
-          </Typography>
-        </Box>
-      )}
       <SearchBar onSelectionChange={searchBarSelectionChange} />
-      <Tabs>
+      <Tabs
+        value={activeTab}
+        onChange={(_, value) => setActiveTab?.(value as number)}
+      >
         <TabList>
           <Tab>Attributes</Tab>
           <Tab>Colouring</Tab>
           <Tab>Hierarchy</Tab>
+          <Tab>Connectivity</Tab>
         </TabList>
         <TabPanel value={0}>
           <AttributeList attributeData={attributeData} />
@@ -100,6 +101,20 @@ export default function Sidebar({
           <Hierarchy
             onSelectionChange={setHierarchyView}
             selectedName={selectedName}
+          />
+        </TabPanel>
+        <TabPanel value={3}>
+          <Connectivity
+            pathFromNode={pathFromNode}
+            setPathFromNode={setPathFromNode}
+            pathToNode={pathToNode}
+            setPathToNode={setPathToNode}
+            pathFromInputValue={pathFromInputValue}
+            setPathFromInputValue={setPathFromInputValue}
+            pathToInputValue={pathToInputValue}
+            setPathToInputValue={setPathToInputValue}
+            pathNotFound={pathNotFound}
+            pathLoading={pathLoading}
           />
         </TabPanel>
       </Tabs>

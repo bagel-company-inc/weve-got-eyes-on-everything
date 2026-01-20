@@ -8,6 +8,7 @@ import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
 import { ColouringContext } from "./components/colouring";
 import { HierarchyView } from "./components/hierarchy";
+import { API_URL } from "./api_url";
 
 export default function CommonModelViewer() {
   const [attributeData, setAttributeData] = React.useState<Record<
@@ -19,12 +20,59 @@ export default function CommonModelViewer() {
   const [searchBarSelectedName, setSearchBarSelectedName] = React.useState<
     string | null
   >(null);
-  const [sidebarWidth, setSidebarWidth] = React.useState(300);
+  const [sidebarWidth, setSidebarWidth] = React.useState(400);
   const [isResizing, setIsResizing] = React.useState(false);
 
   const [colouringContext, setColouringContext] =
     React.useState<ColouringContext>({ category: "", mapping: {} });
-  const [shortestPathMode, setShortestPathMode] = React.useState(false);
+  const [pathFromNode, setPathFromNode] = React.useState<string | null>(null);
+  const [pathToNode, setPathToNode] = React.useState<string | null>(null);
+  const [pathFromInputValue, setPathFromInputValue] = React.useState("");
+  const [pathToInputValue, setPathToInputValue] = React.useState("");
+  const [pathEdges, setPathEdges] = React.useState<Set<string>>(new Set());
+  const [pathNotFound, setPathNotFound] = React.useState(false);
+  const [pathLoading, setPathLoading] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState(0);
+
+  const clearShortestPath = React.useCallback(() => {
+    setPathFromNode(null);
+    setPathToNode(null);
+    setPathEdges(new Set());
+    setPathNotFound(false);
+    setPathLoading(false);
+    // Don't clear input values - preserve user's typed text
+  }, []);
+
+  // Fetch shortest path when both input fields have values
+  React.useEffect(() => {
+    if (
+      pathFromInputValue.trim() &&
+      pathToInputValue.trim() &&
+      pathFromInputValue.trim() !== pathToInputValue.trim()
+    ) {
+      setPathLoading(true);
+      setPathNotFound(false);
+      fetch(
+        `${API_URL}shortest_path?a=${encodeURIComponent(pathFromInputValue.trim())}&b=${encodeURIComponent(pathToInputValue.trim())}`,
+      )
+        .then((response) => response.json())
+        .then((data: string[]) => {
+          setPathEdges(new Set(data));
+          setPathNotFound(data.length === 0);
+          setPathLoading(false);
+        })
+        .catch((err) => {
+          console.error("Error getting shortest path:", err);
+          setPathEdges(new Set());
+          setPathNotFound(false);
+          setPathLoading(false);
+        });
+    } else {
+      setPathEdges(new Set());
+      setPathNotFound(false);
+      setPathLoading(false);
+    }
+  }, [pathFromInputValue, pathToInputValue]);
 
   const handleMouseDown = React.useCallback(() => {
     setIsResizing(true);
@@ -34,11 +82,11 @@ export default function CommonModelViewer() {
     (e: MouseEvent) => {
       if (!isResizing) return;
       const newWidth = e.clientX;
-      // Constrain width between 200px and 600px
-      const constrainedWidth = Math.max(200, Math.min(600, newWidth));
+      console.log(newWidth);
+      const constrainedWidth = Math.max(380, Math.min(600, newWidth));
       setSidebarWidth(constrainedWidth);
     },
-    [isResizing]
+    [isResizing],
   );
 
   const handleMouseUp = React.useCallback(() => {
@@ -75,8 +123,18 @@ export default function CommonModelViewer() {
           width={sidebarWidth}
           colouringContext={colouringContext}
           setColouringContext={setColouringContext}
-          shortestPathMode={shortestPathMode}
-          setShortestPathMode={setShortestPathMode}
+          pathFromNode={pathFromNode}
+          setPathFromNode={setPathFromNode}
+          pathToNode={pathToNode}
+          setPathToNode={setPathToNode}
+          pathFromInputValue={pathFromInputValue}
+          setPathFromInputValue={setPathFromInputValue}
+          pathToInputValue={pathToInputValue}
+          setPathToInputValue={setPathToInputValue}
+          pathNotFound={pathNotFound}
+          pathLoading={pathLoading}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
         />
         <Box
           onMouseDown={handleMouseDown}
@@ -105,7 +163,11 @@ export default function CommonModelViewer() {
             hierarchyView={hierarchyView}
             searchBarSelected={searchBarSelectedName}
             colouringContext={colouringContext}
-            shortestPathMode={shortestPathMode}
+            pathFromNode={pathFromNode}
+            pathToNode={pathToNode}
+            pathEdges={pathEdges}
+            onObjectSelected={() => setActiveTab(0)}
+            onMapObjectClickClearPath={clearShortestPath}
           />
         </Box>
       </Box>

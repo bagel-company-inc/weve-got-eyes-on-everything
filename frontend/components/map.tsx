@@ -86,7 +86,11 @@ interface CommonModelMapProps {
   hierarchyView?: HierarchyView;
   searchBarSelected?: string | null;
   colouringContext: ColouringContext;
-  shortestPathMode?: boolean;
+  pathFromNode?: string | null;
+  pathToNode?: string | null;
+  pathEdges?: Set<string>;
+  onObjectSelected?: () => void;
+  onMapObjectClickClearPath?: () => void;
 }
 
 type PropertiesType = {
@@ -103,7 +107,11 @@ export default function CommonModelMap({
   hierarchyView,
   searchBarSelected,
   colouringContext,
-  shortestPathMode = false,
+  pathFromNode = null,
+  pathToNode = null,
+  pathEdges = new Set(),
+  onObjectSelected,
+  onMapObjectClickClearPath,
 }: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [viewState, setViewState] = useState({
@@ -114,9 +122,6 @@ export default function CommonModelMap({
   const currentAbortController = useRef<AbortController | null>(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [pathStartNode, setPathStartNode] = useState<string | null>(null);
-  const [pathEndNode, setPathEndNode] = useState<string | null>(null);
-  const [pathEdges, setPathEdges] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerSizeRef = useRef({ width: 0, height: 0 });
@@ -133,47 +138,11 @@ export default function CommonModelMap({
       .catch((err) => console.error("Error getting attributes:", err));
 
     setSelectedId(name);
+    if (onObjectSelected) {
+      onObjectSelected();
+    }
   };
 
-  const handlePathNodeClick = (name: string) => {
-    if (!name) return;
-    
-    // If no start node is selected, set it as the start
-    if (!pathStartNode) {
-      setPathStartNode(name);
-      setPathEndNode(null);
-      setPathEdges(new Set());
-      return;
-    }
-    
-    // If start node is selected and it's the same node, clear selection
-    if (pathStartNode === name) {
-      setPathStartNode(null);
-      setPathEndNode(null);
-      setPathEdges(new Set());
-      return;
-    }
-    
-    // If both start and end are set, clicking a new node resets and starts a new path
-    if (pathStartNode && pathEndNode) {
-      setPathStartNode(name);
-      setPathEndNode(null);
-      setPathEdges(new Set());
-      return;
-    }
-    
-    // If start node is selected and a different node is clicked, set as end and fetch path
-    setPathEndNode(name);
-    fetch(`${API_URL}shortest_path?a=${pathStartNode}&b=${name}`)
-      .then((response) => response.json())
-      .then((data: string[]) => {
-        setPathEdges(new Set(data));
-      })
-      .catch((err) => {
-        console.error("Error getting shortest path:", err);
-        setPathEdges(new Set());
-      });
-  };
 
   // Update container size on mount and when container size changes
   useEffect(() => {
@@ -320,7 +289,7 @@ export default function CommonModelMap({
         if (f.properties.name === selectedId) {
           return 5;
         }
-        if (f.properties.name === pathStartNode || f.properties.name === pathEndNode) {
+        if (f.properties.name === pathFromNode || f.properties.name === pathToNode) {
           return 4;
         }
         return 1;
@@ -332,7 +301,7 @@ export default function CommonModelMap({
         if (f.properties.name === selectedId) return [255, 30, 0];
         if (f.properties.name === hoveredId) return [200, 200, 200];
         // Highlight path start/end nodes
-        if (f.properties.name === pathStartNode || f.properties.name === pathEndNode) {
+        if (f.properties.name === pathFromNode || f.properties.name === pathToNode) {
           return [0, 255, 255];
         }
         if (colouringContext.category in f.properties) {
@@ -352,42 +321,24 @@ export default function CommonModelMap({
       onClick: (info) => {
         const name = info.object?.properties.name;
         if (name) {
-          if (shortestPathMode) {
-            // If we're in path selection mode (start node already selected), handle path selection
-            if (pathStartNode !== null) {
-              handlePathNodeClick(name);
-            } else {
-              // Regular click: select object and handle path start
-              selectObject(name);
-              handlePathNodeClick(name);
-            }
-          } else {
-            // Regular selection mode
-            selectObject(name);
-          }
-        } else {
-          // Clicked on empty space - clear path selection if in path mode
-          if (shortestPathMode) {
-            setPathStartNode(null);
-            setPathEndNode(null);
-            setPathEdges(new Set());
-          }
+          onMapObjectClickClearPath?.();
+          selectObject(name);
         }
       },
       onHover: (info) => setHoveredId(info.object?.properties.name),
 
       updateTriggers: {
-        onClick: [selectedId, pathStartNode, pathEndNode],
+        onClick: [selectedId],
         getLineColor: [
           selectedId,
           hoveredId,
-          pathStartNode,
-          pathEndNode,
+          pathFromNode,
+          pathToNode,
           pathEdges,
           colouringContext.category,
           colouringContext.mapping,
         ],
-        getLineWidth: [selectedId, pathStartNode, pathEndNode, pathEdges, viewState.zoom],
+        getLineWidth: [selectedId, pathFromNode, pathToNode, pathEdges, viewState.zoom],
         getPointRadius: [viewState.zoom],
         pickable: [viewState.zoom],
       },
@@ -401,23 +352,13 @@ export default function CommonModelMap({
     geoJsonData,
     selectedId,
     hoveredId,
-    pathStartNode,
-    pathEndNode,
+    pathFromNode,
+    pathToNode,
     pathEdges,
-    shortestPathMode,
     viewState.zoom,
     colouringContext.category,
     colouringContext.mapping,
   ]);
-
-  // Clear path selection when mode is disabled
-  useEffect(() => {
-    if (!shortestPathMode) {
-      setPathStartNode(null);
-      setPathEndNode(null);
-      setPathEdges(new Set());
-    }
-  }, [shortestPathMode]);
 
   const layers = geojsonLayer ? [geojsonLayer] : [];
 
