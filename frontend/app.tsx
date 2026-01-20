@@ -24,6 +24,7 @@ export default function CommonModelViewer() {
 
   const [colouringContext, setColouringContext] =
     React.useState<ColouringContext>({ category: "", mapping: {} });
+  const [shortestPathMode, setShortestPathMode] = React.useState(false);
 
   const handleMouseDown = React.useCallback(() => {
     setIsResizing(true);
@@ -74,6 +75,8 @@ export default function CommonModelViewer() {
           width={sidebarWidth}
           colouringContext={colouringContext}
           setColouringContext={setColouringContext}
+          shortestPathMode={shortestPathMode}
+          setShortestPathMode={setShortestPathMode}
         />
         <Box
           onMouseDown={handleMouseDown}
@@ -102,6 +105,7 @@ export default function CommonModelViewer() {
             hierarchyView={hierarchyView}
             searchBarSelected={searchBarSelectedName}
             colouringContext={colouringContext}
+            shortestPathMode={shortestPathMode}
           />
         </Box>
       </Box>

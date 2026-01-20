@@ -6,6 +6,7 @@ import TabList from "@mui/joy/TabList";
 import TabPanel from "@mui/joy/TabPanel";
 import Typography from "@mui/joy/Typography";
 import Sheet from "@mui/joy/Sheet";
+import Switch from "@mui/joy/Switch";
 
 import AttributeList from "./attribute_list";
 import { Colouring, ColouringContext } from "./colouring";
@@ -21,6 +22,8 @@ interface SidebarProps {
   width?: number;
   colouringContext: ColouringContext;
   setColouringContext: React.Dispatch<React.SetStateAction<ColouringContext>>;
+  shortestPathMode?: boolean;
+  setShortestPathMode?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function Sidebar({
@@ -31,6 +34,8 @@ export default function Sidebar({
   width = 260,
   colouringContext,
   setColouringContext,
+  shortestPathMode = false,
+  setShortestPathMode,
 }: SidebarProps) {
   return (
     <Sheet
@@ -52,6 +57,29 @@ export default function Sidebar({
       <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
         <Typography level="title-lg">Common Model Viewer</Typography>
       </Box>
+      {setShortestPathMode && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            p: 1,
+            borderRadius: "sm",
+            bgcolor: shortestPathMode ? "primary.50" : "background.surface",
+            border: "1px solid",
+            borderColor: shortestPathMode ? "primary.200" : "divider",
+          }}
+        >
+          <Switch
+            checked={shortestPathMode}
+            onChange={(e) => setShortestPathMode(e.target.checked)}
+            sx={{ mr: 1 }}
+          />
+          <Typography level="body-sm">
+            Shortest Path Mode
+          </Typography>
+        </Box>
+      )}
       <SearchBar onSelectionChange={searchBarSelectionChange} />
       <Tabs>
         <TabList>

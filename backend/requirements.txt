@@ -4,3 +4,4 @@ msgspec
 pandas
 geopandas
 shapely
+networkx
