@@ -30,6 +30,8 @@ def main():
     print(f"Database path: `{args.db_path}`")
     print(f"Connectivity CSV: `{args.connectivity_path}`")
 
+    os.makedirs(os.path.dirname(args.db_path), exist_ok=True)
+
     # Call the function
     create_connection(
         db_path=args.db_path,
