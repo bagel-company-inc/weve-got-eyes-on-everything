@@ -3,7 +3,10 @@ import os
 from argparse import ArgumentParser
 
 from database import create_connection
-from app import DATA_PATH, DATABASE_PATH
+
+
+DEFAULT_DATABASE_PATH = os.path.join("data", "common_model.db")
+DEFAULT_CONNECTIVITY_PATH = os.path.join("data", "connectivity.csv")
 
 
 def main():
@@ -14,15 +17,15 @@ def main():
     parser.add_argument(
         "--db-path",
         type=str,
-        default=DATABASE_PATH,
-        help=f"Path to the SQLite database (default: {DATABASE_PATH})",
+        default=DEFAULT_DATABASE_PATH,
+        help=f"Path to the SQLite database (default: {DEFAULT_DATABASE_PATH})",
     )
 
     parser.add_argument(
         "--connectivity-path",
         type=str,
-        default=os.path.join(DATA_PATH, "connectivity.csv"),
-        help=f"Path to the connectivity CSV file (default: {os.path.join(DATA_PATH, 'connectivity.csv')})",
+        default=DEFAULT_CONNECTIVITY_PATH,
+        help=f"Path to the connectivity CSV file (default: {DEFAULT_CONNECTIVITY_PATH})",
     )
 
     args = parser.parse_args()
