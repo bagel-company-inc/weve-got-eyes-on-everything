@@ -1,7 +1,8 @@
+import sqlite3
 from enum import Enum, auto
-from typing import Any, NamedTuple, Self
+from typing import Any, Mapping, NamedTuple, Self
 
-from geopandas import GeoDataFrame
+from database import LevelOfDetail, level_of_detail_table
 
 
 class HierarchyLevel(Enum):
@@ -51,15 +52,54 @@ class HierarchyInput(NamedTuple):
             lv_circuit_code=lv_circuit_code,
         )
 
+    @classmethod
+    def parse_request_args(cls, args: Mapping[str, str]) -> Self:
+        return cls(
+            gxp_code=args.get("gxp"),
+            substation_name=args.get("substation"),
+            hv_feeder_code=args.get("hv"),
+            dtx_code=args.get("dtx"),
+            lv_circuit_code=args.get("lv"),
+        )
+
+    def create_sql_where_clause(self) -> tuple[str, list[str]]:
+        sql: str = ""
+        parameters: list[str] = []
+        if self.gxp_code is not None:
+            sql += " AND gxp_code = ?"
+            parameters.append(self.gxp_code)
+        if self.substation_name is not None:
+            sql += " AND substation_name = ?"
+            parameters.append(self.substation_name)
+        if self.hv_feeder_code is not None:
+            sql += " AND hv_feeder_code = ?"
+            parameters.append(self.hv_feeder_code)
+        if self.dtx_code is not None:
+            sql += " AND dtx_code = ?"
+            parameters.append(self.dtx_code)
+        if self.lv_circuit_code is not None:
+            sql += " AND lv_circuit_code = ?"
+            parameters.append(self.lv_circuit_code)
+        if len(sql) == 0:
+            return "AND 1=1", []
+        return sql, parameters
+
 
 class HierarchyOutput(NamedTuple):
     hierarchy_level: HierarchyLevel
     values: list[str]
 
 
-def get_hierarchy(connectivity: GeoDataFrame, hierarchy_input: HierarchyInput) -> HierarchyOutput:
+def get_hierarchy(
+    connection: sqlite3.Connection, hierarchy_input: HierarchyInput
+) -> HierarchyOutput:
     hierarchy_level: HierarchyLevel = HierarchyLevel.GXP
-    values: list[str] = []
+    sql: str = ""
+    parameters: list[str] = []
+
+    additional_where_clause, extra_parameters = hierarchy_input.create_sql_where_clause()
+    column: str = "gxp_code"
+
     if (
         hierarchy_input.gxp_code
         and hierarchy_input.substation_name
@@ -67,46 +107,43 @@ def get_hierarchy(connectivity: GeoDataFrame, hierarchy_input: HierarchyInput) -
         and hierarchy_input.dtx_code
     ):
         hierarchy_level = HierarchyLevel.LV
-        df = connectivity[
-            (connectivity.gxp_code == hierarchy_input.gxp_code)
-            & (connectivity.substation_name == hierarchy_input.substation_name)
-            & (connectivity.hv_feeder_code == hierarchy_input.hv_feeder_code)
-            & (connectivity.dtx_code == hierarchy_input.dtx_code)
-            & (~connectivity.lv_circuit_code.isna())
-        ]
-        values = df.lv_circuit_code.unique().tolist()
+        column = "lv_circuit_code"
     elif (
         hierarchy_input.gxp_code
         and hierarchy_input.substation_name
         and hierarchy_input.hv_feeder_code
     ):
         hierarchy_level = HierarchyLevel.DTX
-        df = connectivity[
-            (connectivity.gxp_code == hierarchy_input.gxp_code)
-            & (connectivity.substation_name == hierarchy_input.substation_name)
-            & (connectivity.hv_feeder_code == hierarchy_input.hv_feeder_code)
-            & (~connectivity.dtx_code.isna())
-        ]
-        values = df.dtx_code.unique().tolist()
+        column = "dtx_code"
     elif hierarchy_input.gxp_code and hierarchy_input.substation_name:
         hierarchy_level = HierarchyLevel.HV
-        df = connectivity[
-            (connectivity.gxp_code == hierarchy_input.gxp_code)
-            & (connectivity.substation_name == hierarchy_input.substation_name)
-            & (~connectivity.hv_feeder_code.isna())
-        ]
-        values = df.hv_feeder_code.unique().tolist()
+        column = "hv_feeder_code"
     elif hierarchy_input.gxp_code:
         hierarchy_level = HierarchyLevel.SUBSTATION
-        df = connectivity[
-            (connectivity.gxp_code == hierarchy_input.gxp_code)
-            & (~connectivity.substation_name.isna())
-        ]
-        values = df.substation_name.unique().tolist()
+        column = "substation_name"
     else:
         hierarchy_level = HierarchyLevel.GXP
-        df = connectivity[~connectivity.gxp_code.isna()]
-        values = df.gxp_code.unique().tolist()
+        column = "gxp_code"
+
+    parameters.extend(extra_parameters)
+
+    values: list[str] = []
+
+    cursor = connection.cursor()
+    sql = f"""
+    SELECT
+        DISTINCT {column}
+    FROM {level_of_detail_table(LevelOfDetail.ALL)}
+    WHERE out_of_order_indicator = 'INS'
+    {additional_where_clause} AND {column} IS NOT NULL;
+    """
+    cursor.execute(sql, parameters)
+
+    rows = cursor.fetchall()
+    for row in rows:
+        values.append(row[0])
+
+    cursor.close()
 
     return HierarchyOutput(hierarchy_level, values)
 
@@ -121,19 +158,7 @@ def to_hierarchy_json(hierarchy_output: HierarchyOutput) -> dict[str, Any]:
 
 
 def get_hierarchy_json(
-    connectivity: GeoDataFrame,
-    gxp_code: str | None = None,
-    substation_name: str | None = None,
-    hv_feeder_code: str | None = None,
-    dtx_code: str | None = None,
-    lv_circuit_code: str | None = None,
+    connection: sqlite3.Connection, hierarchy_input: HierarchyInput
 ) -> dict[str, Any]:
-    hierarchy_input: HierarchyInput = HierarchyInput.new(
-        gxp_code=gxp_code,
-        substation_name=substation_name,
-        hv_feeder_code=hv_feeder_code,
-        dtx_code=dtx_code,
-        lv_circuit_code=lv_circuit_code,
-    )
-    hierarchy_output: HierarchyOutput | None = get_hierarchy(connectivity, hierarchy_input)
+    hierarchy_output: HierarchyOutput = get_hierarchy(connection, hierarchy_input)
     return to_hierarchy_json(hierarchy_output)

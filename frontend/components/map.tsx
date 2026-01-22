@@ -31,7 +31,7 @@ const widgetTheme = prefersDarkScheme.matches
 // Throttle: limit function calls to once per interval
 function throttle<T extends (...args: any[]) => void>(
   func: T,
-  limit: number
+  limit: number,
 ): T {
   let inThrottle: boolean;
   return function (this: any, ...args: any[]) {
@@ -46,7 +46,7 @@ function throttle<T extends (...args: any[]) => void>(
 // Debounce: delay function until no calls for delay ms
 function debounce<T extends (...args: any[]) => void>(
   func: T,
-  delay: number
+  delay: number,
 ): T {
   let timer: NodeJS.Timeout;
   return function (this: any, ...args: any[]) {
@@ -61,7 +61,7 @@ const MAP_STYLE =
 function getCurrentBounds(
   viewState: any,
   containerWidth: number,
-  containerHeight: number
+  containerHeight: number,
 ): number[] {
   const { width, height } = {
     width: containerWidth,
@@ -126,9 +126,17 @@ export default function CommonModelMap({
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerSizeRef = useRef({ width: 0, height: 0 });
 
-  const selectObject = (name: string) => {
+  const selectObject = (name: string, vs: any) => {
+    const size = containerSizeRef.current;
+    const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
+      vs,
+      size.width || window.innerWidth,
+      size.height || window.innerHeight,
+    );
     if (!name) return;
-    fetch(`${API_URL}attributes?name=${name}`)
+    fetch(
+      `${API_URL}attributes?name=${name}&bbox=${minLng},${minLat},${maxLng},${maxLat}`,
+    )
       .then((response) => response.json())
       .then((data) => {
         if (onAttributeDataChange) {
@@ -142,7 +150,6 @@ export default function CommonModelMap({
       onObjectSelected();
     }
   };
-
 
   // Update container size on mount and when container size changes
   useEffect(() => {
@@ -178,7 +185,7 @@ export default function CommonModelMap({
     const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
       vs,
       size.width || window.innerWidth,
-      size.height || window.innerHeight
+      size.height || window.innerHeight,
     );
     const zoomLevel = vs.zoom;
 
@@ -250,7 +257,7 @@ export default function CommonModelMap({
 
   useEffect(() => {
     if (!searchBarSelected) return;
-    selectObject(searchBarSelected);
+    selectObject(searchBarSelected, viewState);
     fetch(`${API_URL}centroid?name=${searchBarSelected}`)
       .then((response) => response.json())
       .then((data) => {
@@ -268,7 +275,7 @@ export default function CommonModelMap({
         setViewState(newViewState);
       })
       .catch((err) => console.error("Error getting centroid:", err));
-  }, [searchBarSelected]);
+  }, [searchBarSelected, viewState]);
 
   const geojsonLayer = useMemo(() => {
     if (!geoJsonData) return null;
@@ -278,7 +285,8 @@ export default function CommonModelMap({
       data: geoJsonData,
       pickable: viewState.zoom >= 15,
       filled: false,
-      getPointRadius: 1 / viewState.zoom,
+      getPointRadius: 1,
+      pointRadiusUnits: "pixels",
       lineCapRounded: true,
       lineJointRounded: true,
       lineWidthUnits: "pixels",
@@ -289,7 +297,10 @@ export default function CommonModelMap({
         if (f.properties.name === selectedId) {
           return 5;
         }
-        if (f.properties.name === pathFromNode || f.properties.name === pathToNode) {
+        if (
+          f.properties.name === pathFromNode ||
+          f.properties.name === pathToNode
+        ) {
           return 4;
         }
         return 1;
@@ -301,7 +312,10 @@ export default function CommonModelMap({
         if (f.properties.name === selectedId) return [255, 30, 0];
         if (f.properties.name === hoveredId) return [200, 200, 200];
         // Highlight path start/end nodes
-        if (f.properties.name === pathFromNode || f.properties.name === pathToNode) {
+        if (
+          f.properties.name === pathFromNode ||
+          f.properties.name === pathToNode
+        ) {
           return [0, 255, 255];
         }
         if (colouringContext.category in f.properties) {
@@ -322,13 +336,13 @@ export default function CommonModelMap({
         const name = info.object?.properties.name;
         if (name) {
           onMapObjectClickClearPath?.();
-          selectObject(name);
+          selectObject(name, viewState);
         }
       },
       onHover: (info) => setHoveredId(info.object?.properties.name),
 
       updateTriggers: {
-        onClick: [selectedId],
+        onClick: [selectedId, viewState],
         getLineColor: [
           selectedId,
           hoveredId,
@@ -338,7 +352,13 @@ export default function CommonModelMap({
           colouringContext.category,
           colouringContext.mapping,
         ],
-        getLineWidth: [selectedId, pathFromNode, pathToNode, pathEdges, viewState.zoom],
+        getLineWidth: [
+          selectedId,
+          pathFromNode,
+          pathToNode,
+          pathEdges,
+          viewState.zoom,
+        ],
         getPointRadius: [viewState.zoom],
         pickable: [viewState.zoom],
       },
