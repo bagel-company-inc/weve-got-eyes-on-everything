@@ -2,7 +2,7 @@ import sqlite3
 from enum import Enum, auto
 from typing import Any, Mapping, NamedTuple, Self
 
-from database import LevelOfDetail, level_of_detail_table
+from src.database import LevelOfDetail, level_of_detail_table
 
 
 class HierarchyLevel(Enum):

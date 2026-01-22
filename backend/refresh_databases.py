@@ -2,14 +2,14 @@
 import os
 from argparse import ArgumentParser
 
-from database import create_connection
+from src.database import create_connection
 
 
 DEFAULT_DATABASE_PATH = os.path.join("data", "common_model.db")
 DEFAULT_CONNECTIVITY_PATH = os.path.join("data", "connectivity.csv")
 
 
-def main():
+def main() -> None:
     parser = ArgumentParser(
         description="Initialize the SQLite/SpatiaLite database from connectivity CSV."
     )

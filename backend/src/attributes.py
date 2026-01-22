@@ -1,15 +1,15 @@
 import sqlite3
 from typing import Any
 
-from database import (
+from src.database import (
     LevelOfDetail,
     level_of_detail_table,
     CONNECTIVITY_COLUMNS,
     INDEX_COLUMN,
     GEOMETRY_FIELD_NAME,
 )
-from hierarchy import HierarchyInput
-from geometry import Bounds
+from src.hierarchy import HierarchyInput
+from src.geometry import Bounds
 
 
 def get_column_names(connection: sqlite3.Connection, fast: bool = True) -> list[str]:

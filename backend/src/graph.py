@@ -3,8 +3,8 @@ from typing import NamedTuple
 
 from networkx import NetworkXNoPath, NodeNotFound, MultiGraph, dfs_edges, shortest_path
 
-from database import LevelOfDetail, level_of_detail_table
-from hierarchy import HierarchyInput
+from src.database import LevelOfDetail, level_of_detail_table
+from src.hierarchy import HierarchyInput
 
 
 class ConnectivityGraph(NamedTuple):

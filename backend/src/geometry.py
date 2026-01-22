@@ -1,14 +1,14 @@
 import sqlite3
 from typing import Any, NamedTuple, Self
 
-from database import (
+from src.database import (
     LevelOfDetail,
     level_of_detail_table,
     CONNECTIVITY_COLUMNS,
     GEOMETRY_FIELD_NAME,
     create_connection,
 )
-from hierarchy import HierarchyInput
+from src.hierarchy import HierarchyInput
 
 
 def level_of_detail_from_zoom(zoom_level: float) -> LevelOfDetail:

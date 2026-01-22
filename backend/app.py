@@ -6,18 +6,18 @@ import msgspec
 from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 
-from attributes import (
+from src.attributes import (
     get_column_names,
     get_column_unique_values,
     get_attributes,
     get_search_results,
     get_centroid_at_name,
 )
-from database import create_connection
-from hierarchy import HierarchyInput, get_hierarchy_json
+from src.database import create_connection
+from src.hierarchy import HierarchyInput, get_hierarchy_json
 
 # from graph import graph_shortest_path, graph_flood_fill
-from geometry import Bounds, get_geojson_from_bounds
+from src.geometry import Bounds, get_geojson_from_bounds
 
 app = Flask(__name__)
 CORS(app)
