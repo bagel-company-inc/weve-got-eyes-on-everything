@@ -164,6 +164,7 @@ def create_all_tables(connection: sqlite3.Connection, connectivity: GeoDataFrame
 
 
 def refresh_database(db_path: str, connectivity_path: str | None = None) -> sqlite3.Connection:
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
     if os.path.exists(db_path):
         os.remove(db_path)
 
@@ -181,7 +182,6 @@ def create_connection(
     db_path: str, connectivity_path: str | None = None, refresh: bool = False
 ) -> sqlite3.Connection:
     if refresh:
-        assert connectivity_path is not None
         return refresh_database(db_path, connectivity_path)
 
     connection = sqlite3.connect(db_path)

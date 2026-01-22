@@ -6,7 +6,6 @@ from src.database import create_connection
 
 
 DEFAULT_DATABASE_PATH = os.path.join("data", "common_model.db")
-DEFAULT_CONNECTIVITY_PATH = os.path.join("data", "connectivity.csv")
 
 
 def main() -> None:
@@ -24,16 +23,14 @@ def main() -> None:
     parser.add_argument(
         "--connectivity-path",
         type=str,
-        default=DEFAULT_CONNECTIVITY_PATH,
-        help=f"Path to the connectivity CSV file (default: {DEFAULT_CONNECTIVITY_PATH})",
+        default=None,
+        help="Path to the connectivity CSV file (default read from common model database)",
     )
 
     args = parser.parse_args()
 
     print(f"Database path: `{args.db_path}`")
     print(f"Connectivity CSV: `{args.connectivity_path}`")
-
-    os.makedirs(os.path.dirname(args.db_path), exist_ok=True)
 
     # Call the function
     create_connection(
