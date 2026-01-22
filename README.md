@@ -2,7 +2,6 @@
 
 
 Install [spatialite](https://docs.djangoproject.com/en/6.0/ref/contrib/gis/install/spatialite/).
- - [Windows](https://github.com/FAIMS/FAIMS2-Documentation/blob/master/docs/Installing+Spatialite+Tool+on+Windows.md)
 
 ```
 cd backend
