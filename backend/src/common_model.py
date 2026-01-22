@@ -41,9 +41,12 @@ def df_to_gdf(df: DataFrame) -> GeoDataFrame:
 
 def get_latest_extract_id(connection: CNMConnection) -> int:
     sql: str = """
-    SELECT MAX(extract_id) AS extract_id, joke
+    SELECT TOP 1
+        extract_id,
+        joke
     FROM cm_elec_run
     WHERE status = 'SUCCESS'
+    ORDER BY extract_id;
     """
     df: DataFrame = connection.read_sql(sql)
     extract_id: int = df["extract_id"].values[0]
