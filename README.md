@@ -1,15 +1,17 @@
 ## Usage
 
-Install [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 
-Install [yarn](https://classic.yarnpkg.com/en/docs/install):
-
-```
-npm install --global yarn
-```
+Install [spatialite](https://docs.djangoproject.com/en/6.0/ref/contrib/gis/install/spatialite/).
 
 ```
-yarn install
-npm run
+cd backend
+pip install -r requirements.txt
+python3 refresh_databases.py
+gunicorn app:app --workers 4 --worker-class sync
+```
+
+```
+cd frontend
+npm install
 npm start
 ```
