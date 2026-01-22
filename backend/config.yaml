@@ -1,0 +1,6 @@
+connections:
+  common_model:
+    user_name: "JSDS1\\svc_ADMS_Extractor"
+    server: "ADMSSQLAOL_Dev.jsds1.live"
+    database: "ExtractorDev"
+    url: "mssql+pyodbc://ADMSSQLAOL_Dev.jsds1.live:1433/ExtractorDev?trusted_connection=yes&amp;MultiSubnetFailover=Yes&amp;driver=ODBC+Driver+17+for+SQL+Server"

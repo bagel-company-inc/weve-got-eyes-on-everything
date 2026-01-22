@@ -1,10 +1,10 @@
 import sqlite3
 from typing import Any, NamedTuple, Self
 
+from src.common_model import CONNECTIVITY_COLUMNS
 from src.database import (
     LevelOfDetail,
     level_of_detail_table,
-    CONNECTIVITY_COLUMNS,
     GEOMETRY_FIELD_NAME,
     create_connection,
 )

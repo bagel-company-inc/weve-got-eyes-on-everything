@@ -3,38 +3,13 @@ import sqlite3
 from enum import Enum, auto
 from typing import Any
 
-from geopandas import GeoDataFrame, GeoSeries
-from pandas import DataFrame, read_csv
+from geopandas import GeoDataFrame
+
+from src.common_model import CONNECTIVITY_COLUMNS, get_common_model
 
 
 EPSG: int = 4326
 
-CONNECTIVITY_COLUMNS: dict[str, str] = {
-    "extract_id": "INTEGER",
-    "object_type": "TEXT",
-    "object_id": "INTEGER",
-    "name": "TEXT",
-    "node_1": "TEXT",
-    "node_2": "TEXT",
-    "node_1_voltage": "REAL",
-    "node_2_voltage": "REAL",
-    "feeder_code": "TEXT",
-    "gxp_code": "TEXT",
-    "substation_name": "TEXT",
-    "hv_feeder_code": "TEXT",
-    "dtx_code": "TEXT",
-    "lv_circuit_code": "TEXT",
-    "hierarchy_level": "TEXT",
-    "substation_code_idf": "TEXT",
-    "out_of_order_indicator": "TEXT",
-    "is_in_sub": "INTEGER",
-    "normal_position": "INTEGER",
-    "feeder_hat": "INTEGER",
-    "date_modified": "TEXT",
-    "length_km": "REAL",
-    "gxp_name": "TEXT",
-    "delivery_point": "TEXT",
-}
 
 INDEX_COLUMN: str = "id"
 GEOMETRY_FIELD_NAME: str = "geometry"
@@ -71,14 +46,6 @@ def connectivity_create_level_of_detail(
             ]
         case LevelOfDetail.ALL:
             return connectivity
-
-
-def load_csv_to_gdf(path: str) -> GeoDataFrame:
-    df: DataFrame = read_csv(path, index_col=None)
-    df["geometry"] = GeoSeries.from_wkt(df.geometry_4326, crs=f"EPSG:{EPSG}")
-    gdf: GeoDataFrame = GeoDataFrame(df, geometry="geometry", crs=f"EPSG:{EPSG}")
-    gdf = gdf.replace({float("nan"): None})
-    return gdf
 
 
 def load_spatialite(connection: sqlite3.Connection) -> None:
@@ -196,16 +163,16 @@ def create_all_tables(connection: sqlite3.Connection, connectivity: GeoDataFrame
         create_level_of_detail_table(connection, connectivity, level_of_detail)
 
 
-def refresh_database(db_path: str, connectivity_path: str) -> sqlite3.Connection:
+def refresh_database(db_path: str, connectivity_path: str | None = None) -> sqlite3.Connection:
     if os.path.exists(db_path):
         os.remove(db_path)
 
-    gdf: GeoDataFrame = load_csv_to_gdf(connectivity_path)
+    common_model: GeoDataFrame = get_common_model(csv_path=connectivity_path)
 
     connection = sqlite3.connect(db_path)
     load_spatialite(connection)
 
-    create_all_tables(connection, gdf)
+    create_all_tables(connection, common_model)
 
     return connection
 

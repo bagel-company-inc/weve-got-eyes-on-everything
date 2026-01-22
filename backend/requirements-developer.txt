@@ -7,3 +7,4 @@ pandas-stubs
 types-geopandas
 types-Flask-Cors
 types-networkx
+types-PyYAML
