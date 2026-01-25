@@ -1,5 +1,5 @@
-import os
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 import msgspec
@@ -18,15 +18,15 @@ from src.attributes import (
 from src.database import create_connection
 from src.hierarchy import HierarchyInput, get_hierarchy_json
 
-from src.graph import GraphLoadingManager, graph_shortest_path, graph_flood_fill
+from src.graph import graph_shortest_path, graph_flood_fill
 from src.geometry import Bounds, get_geojson_from_bounds
 
 app = Flask(__name__)
 CORS(app)
 
-DATA_PATH = os.path.join(app.root_path, "data")
-
-DATABASE_PATH = os.path.join(DATA_PATH, "common_model.db")
+DATA_PATH: Path = Path(app.root_path) / "data"
+DATABASE_PATH: Path = DATA_PATH / "common_model.db"
+GRAPH_PATH: Path = DATA_PATH / "graphs"
 
 
 @cross_origin(origins=["*"])
@@ -173,9 +173,8 @@ def shortest_path() -> Response:
 
     hierarchy_input: HierarchyInput = HierarchyInput.parse_request_args(request.args)
 
-    connection: sqlite3.Connection = get_db()
     json_values: list[str] = graph_shortest_path(
-        GraphLoadingManager(), connection, hierarchy_input, node_a, node_b, edges_to_exclude
+        hierarchy_input, GRAPH_PATH, node_a, node_b, edges_to_exclude
     )
     json_bytes: bytes = msgspec.json.encode(json_values)
     response = Response(json_bytes, status=200, mimetype="application/json")
@@ -196,10 +195,7 @@ def flood_fill() -> Response:
 
     hierarchy_input: HierarchyInput = HierarchyInput.parse_request_args(request.args)
 
-    connection: sqlite3.Connection = get_db()
-    json_values: list[str] = graph_flood_fill(
-        GraphLoadingManager(), connection, hierarchy_input, node, edges_to_exclude
-    )
+    json_values: list[str] = graph_flood_fill(hierarchy_input, GRAPH_PATH, node, edges_to_exclude)
     json_bytes: bytes = msgspec.json.encode(json_values)
     response = Response(json_bytes, status=200, mimetype="application/json")
     return response

@@ -7,7 +7,7 @@ import Box from "@mui/joy/Box";
 import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
 import { ColouringContext } from "./components/colouring";
-import { HierarchyView } from "./components/hierarchy";
+import { HierarchyView, addHierarchyToURL } from "./components/hierarchy";
 import { API_URL } from "./api_url";
 
 export default function CommonModelViewer() {
@@ -58,7 +58,10 @@ export default function CommonModelViewer() {
     ) {
       setPathLoading(true);
       setPathNotFound(false);
-      let url = `${API_URL}shortest_path?a=${encodeURIComponent(pathFromInputValue.trim())}&b=${encodeURIComponent(pathToInputValue.trim())}`;
+      let url = addHierarchyToURL(
+        hierarchyView,
+        `${API_URL}shortest_path?a=${encodeURIComponent(pathFromInputValue.trim())}&b=${encodeURIComponent(pathToInputValue.trim())}`,
+      );
       if (excludedEdges.length > 0) {
         const excludedString = excludedEdges
           .map((edge) => edge.trim())
@@ -99,7 +102,7 @@ export default function CommonModelViewer() {
         abortController.abort();
       };
     }
-  }, [pathFromInputValue, pathToInputValue, excludedEdges]);
+  }, [pathFromInputValue, pathToInputValue, excludedEdges, hierarchyView]);
 
   const handleMouseDown = React.useCallback(() => {
     setIsResizing(true);

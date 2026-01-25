@@ -1,4 +1,6 @@
+import pickle
 import sqlite3
+from pathlib import Path
 from typing import NamedTuple
 
 from networkx import NetworkXNoPath, NodeNotFound, MultiGraph, dfs_edges, shortest_path
@@ -12,26 +14,32 @@ class ConnectivityGraph(NamedTuple):
     edges_to_nodes: dict[str, tuple[str, str]]
 
 
-class GraphLoadingManager:
-    hierarchy: HierarchyInput | None
-    connectivity_graph: ConnectivityGraph | None
+def write_connectivity_graph(connectivity_graph: ConnectivityGraph, path: Path) -> None:
+    with open(path / "graph.pickle", "wb") as f:
+        pickle.dump(connectivity_graph.graph, f)
 
-    def __init__(self) -> None:
-        self.hierarchy = None
-        self.connectivity_graph = None
+    with open(path / "edges_to_nodes.pickle", "wb") as f:
+        pickle.dump(connectivity_graph.edges_to_nodes, f)
 
-    def get_connectivity_graph(
-        self, connection: sqlite3.Connection, hierarchy_input: HierarchyInput
-    ) -> ConnectivityGraph:
-        if hierarchy_input == self.hierarchy:
-            assert self.connectivity_graph is not None
-            return self.connectivity_graph
 
-        print("Creating new graph for new hierarchy")
-        new_connectivity_graph: ConnectivityGraph = connectivity_to_graph(
-            connection=connection, hierarchy_input=hierarchy_input
-        )
-        return new_connectivity_graph
+def read_connectivity_graph(path: Path) -> ConnectivityGraph:
+    with open(path / "graph.pickle", "rb") as f:
+        graph: MultiGraph = pickle.load(f)  # type: ignore[type-arg]
+
+    with open(path / "edges_to_nodes.pickle", "rb") as f:
+        nodes_to_edges: dict[str, tuple[str, str]] = pickle.load(f)
+
+    return ConnectivityGraph(graph, nodes_to_edges)
+
+
+def get_connectivity_graph(
+    hierarchy_input: HierarchyInput, graph_path: Path
+) -> ConnectivityGraph | None:
+    print(hierarchy_input, graph_path)
+    if hierarchy_input.gxp_code is None:
+        return None
+
+    return read_connectivity_graph(graph_path / hierarchy_input.gxp_code)
 
 
 def connectivity_to_graph(
@@ -86,16 +94,17 @@ def connectivity_to_graph(
 
 
 def graph_shortest_path(
-    graph_loading_manager: GraphLoadingManager,
-    connection: sqlite3.Connection,
     hierarchy_input: HierarchyInput,
+    graph_path: Path,
     node_a: str,
     node_b: str,
     edges_to_exclude: list[str],
 ) -> list[str]:
-    connectivity_graph: ConnectivityGraph = graph_loading_manager.get_connectivity_graph(
-        connection, hierarchy_input
+    connectivity_graph: ConnectivityGraph | None = get_connectivity_graph(
+        hierarchy_input, graph_path
     )
+    if connectivity_graph is None:
+        return []
 
     if not connectivity_graph.graph.has_node(node_a) or not connectivity_graph.graph.has_node(
         node_b
@@ -141,15 +150,16 @@ def graph_shortest_path(
 
 
 def graph_flood_fill(
-    graph_loading_manager: GraphLoadingManager,
-    connection: sqlite3.Connection,
     hierarchy_input: HierarchyInput,
+    graph_path: Path,
     node: str,
     edges_to_exclude: list[str],
 ) -> list[str]:
-    connectivity_graph: ConnectivityGraph = graph_loading_manager.get_connectivity_graph(
-        connection, hierarchy_input
+    connectivity_graph: ConnectivityGraph | None = get_connectivity_graph(
+        hierarchy_input, graph_path
     )
+    if connectivity_graph is None:
+        return []
 
     if not connectivity_graph.graph.has_node(node):
         return []

@@ -262,7 +262,8 @@ export default function Connectivity({
       )}
       {pathNotFound && !pathLoading && (
         <Alert color="warning" size="sm">
-          Path not found between these nodes
+          Path not found between these nodes. Make sure you have selected a GXP
+          from the hierarchy selector, and are not searching the entire network.
         </Alert>
       )}
     </Box>

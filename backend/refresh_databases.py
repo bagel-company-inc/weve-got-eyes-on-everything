@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-import os
 from argparse import ArgumentParser
+from pathlib import Path
 
-from src.database import create_connection
+from src.initialise_databases import create_or_replace_databases
 
 
-DEFAULT_DATABASE_PATH = os.path.join("data", "common_model.db")
+DATA_PATH: Path = Path(__file__).parent / "data"
+
+DEFAULT_DATABASE_PATH: Path = DATA_PATH / "common_model.db"
+DEFAULT_GRAPH_PATH: Path = DATA_PATH / "graphs"
 
 
 def main() -> None:
@@ -29,14 +32,18 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    print(f"Database path: `{args.db_path}`")
-    print(f"Connectivity CSV: `{args.connectivity_path}`")
+    db_path: Path = Path(args.db_path)
+    graph_path: Path = DEFAULT_GRAPH_PATH
+    connectivity_path: Path | None = (
+        Path(args.connectivity_path) if args.connectivity_path is not None else None
+    )
 
-    # Call the function
-    create_connection(
-        db_path=args.db_path,
-        connectivity_path=args.connectivity_path,
-        refresh=True,
+    print(f"Database path: `{db_path}`")
+    print(f"Graph path `{graph_path}`")
+    print(f"Connectivity CSV: `{connectivity_path}`")
+
+    create_or_replace_databases(
+        db_path=db_path, graph_path=graph_path, connectivity_path=connectivity_path
     )
 
     print("Database initialized successfully.")

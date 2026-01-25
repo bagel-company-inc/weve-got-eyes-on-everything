@@ -118,9 +118,7 @@ def get_geojson_from_bounds(
 
 if __name__ == "__main__":
     db_path: str = "data/common_model.db"
-    connection: sqlite3.Connection = create_connection(
-        db_path, "data/connectivity.csv", refresh=False
-    )
+    connection: sqlite3.Connection = create_connection(db_path)
 
     cursor = connection.cursor()
 

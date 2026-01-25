@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from geopandas import GeoDataFrame, GeoSeries
 from pandas import DataFrame, read_csv
 
@@ -58,7 +60,7 @@ def get_latest_extract_id(connection: CNMConnection) -> int:
     return extract_id
 
 
-def get_common_model(csv_path: str | None = None) -> GeoDataFrame:
+def get_common_model(csv_path: Path | None = None) -> GeoDataFrame:
     if csv_path is not None:
         df: DataFrame = read_csv(csv_path, index_col=None)
         gdf: GeoDataFrame = df_to_gdf(df)

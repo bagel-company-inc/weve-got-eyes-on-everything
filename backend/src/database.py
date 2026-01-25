@@ -1,11 +1,11 @@
-import os
 import sqlite3
 from enum import Enum, auto
+from pathlib import Path
 from typing import Any
 
 from geopandas import GeoDataFrame
 
-from src.common_model import CONNECTIVITY_COLUMNS, get_common_model
+from src.common_model import CONNECTIVITY_COLUMNS
 
 
 EPSG: int = 4326
@@ -162,27 +162,7 @@ def create_all_tables(connection: sqlite3.Connection, connectivity: GeoDataFrame
         create_level_of_detail_table(connection, connectivity, level_of_detail)
 
 
-def refresh_database(db_path: str, connectivity_path: str | None = None) -> sqlite3.Connection:
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    if os.path.exists(db_path):
-        os.remove(db_path)
-
-    common_model: GeoDataFrame = get_common_model(csv_path=connectivity_path)
-
-    connection = sqlite3.connect(db_path)
-    load_spatialite(connection)
-
-    create_all_tables(connection, common_model)
-
-    return connection
-
-
-def create_connection(
-    db_path: str, connectivity_path: str | None = None, refresh: bool = False
-) -> sqlite3.Connection:
-    if refresh:
-        return refresh_database(db_path, connectivity_path)
-
+def create_connection(db_path: str | Path) -> sqlite3.Connection:
     connection = sqlite3.connect(db_path)
     load_spatialite(connection)
     return connection
