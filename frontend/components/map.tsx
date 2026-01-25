@@ -20,7 +20,7 @@ import {
 } from "@deck.gl/widgets";
 import "@deck.gl/widgets/stylesheet.css";
 import { ColouringContext } from "./colouring";
-import { HierarchyView } from "./hierarchy";
+import { HierarchyView, addHierarchyToURL } from "./hierarchy";
 import { API_URL } from "../api_url";
 
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -196,20 +196,10 @@ export default function CommonModelMap({
     const controller = new AbortController();
     currentAbortController.current = controller;
 
-    let url = `${API_URL}geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`;
-
-    if (hv?.gxp_code) {
-      url += `&gxp=${hv.gxp_code}`;
-    }
-    if (hv?.substation_name) {
-      url += `&substation=${hv.substation_name}`;
-    }
-    if (hv?.hv_feeder_code) {
-      url += `&hv=${hv.hv_feeder_code}`;
-    }
-    if (hv?.dtx_code) {
-      url += `&dtx=${hv.dtx_code}`;
-    }
+    let url = addHierarchyToURL(
+      hv,
+      `${API_URL}geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`,
+    );
 
     try {
       const res = await fetch(url, { signal: controller.signal });

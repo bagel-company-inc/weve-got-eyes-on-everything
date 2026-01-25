@@ -18,6 +18,7 @@ interface SidebarProps {
   attributeData: Record<string, any> | null;
   searchBarSelectionChange?: (name: string | null) => void;
   selectedName?: string | null;
+  hierarchyView: HierarchyView | null;
   setHierarchyView?: (hierarchy_view: HierarchyView | null) => void;
   width?: number;
   colouringContext: ColouringContext;
@@ -42,6 +43,7 @@ export default function Sidebar({
   attributeData,
   searchBarSelectionChange,
   selectedName,
+  hierarchyView,
   setHierarchyView,
   width = 260,
   colouringContext,
@@ -81,7 +83,10 @@ export default function Sidebar({
       <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
         <Typography level="title-lg">Common Model Viewer</Typography>
       </Box>
-      <SearchBar onSelectionChange={searchBarSelectionChange} />
+      <SearchBar
+        onSelectionChange={searchBarSelectionChange}
+        hierarchyView={hierarchyView}
+      />
       <Tabs
         value={activeTab}
         onChange={(_, value) => setActiveTab?.(value as number)}
@@ -99,6 +104,7 @@ export default function Sidebar({
           <Colouring
             colouringContext={colouringContext}
             setColouringContext={setColouringContext}
+            hierarchyView={hierarchyView}
           />
         </TabPanel>
         <TabPanel value={2}>
@@ -109,6 +115,7 @@ export default function Sidebar({
         </TabPanel>
         <TabPanel value={3}>
           <Connectivity
+            hierarchyView={hierarchyView}
             pathFromNode={pathFromNode}
             setPathFromNode={setPathFromNode}
             pathToNode={pathToNode}

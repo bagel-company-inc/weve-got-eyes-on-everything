@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
 import Autocomplete from "@mui/joy/Autocomplete";
 import { API_URL } from "../api_url";
+import { HierarchyView, addHierarchyToURL } from "./hierarchy";
 
 interface SearchBarProps {
   onSelectionChange?: (name: string | null) => void;
+  hierarchyView: HierarchyView | null;
 }
 
-export default function SearchBar({ onSelectionChange }: SearchBarProps) {
+export default function SearchBar({
+  onSelectionChange,
+  hierarchyView,
+}: SearchBarProps) {
   const [options, setOptions] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,10 +24,12 @@ export default function SearchBar({ onSelectionChange }: SearchBarProps) {
         return;
       }
       setLoading(true);
+      const url = addHierarchyToURL(
+        hierarchyView,
+        `${API_URL}search_complete?input=${encodeURIComponent(inputValue)}`,
+      );
       try {
-        const response = await fetch(
-          `${API_URL}search_complete?input=${encodeURIComponent(inputValue)}`
-        );
+        const response = await fetch(url);
         const data = await response.json();
         setOptions(data.slice(0, 100));
       } catch (error) {
@@ -34,7 +41,7 @@ export default function SearchBar({ onSelectionChange }: SearchBarProps) {
 
     const debounceTimeout = setTimeout(fetchSuggestions, 300); // Debounce API calls
     return () => clearTimeout(debounceTimeout);
-  }, [inputValue]);
+  }, [inputValue, hierarchyView]);
 
   return (
     <Autocomplete

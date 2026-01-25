@@ -68,9 +68,9 @@ export default function CommonModelViewer() {
           url += `&exclude=${encodeURIComponent(excludedString)}`;
         }
       }
-      
+
       const abortController = new AbortController();
-      
+
       fetch(url, { signal: abortController.signal })
         .then((response) => response.json())
         .then((data: string[]) => {
@@ -145,6 +145,7 @@ export default function CommonModelViewer() {
           attributeData={attributeData}
           searchBarSelectionChange={setSearchBarSelectedName}
           selectedName={searchBarSelectedName}
+          hierarchyView={hierarchyView}
           setHierarchyView={setHierarchyView}
           width={sidebarWidth}
           colouringContext={colouringContext}

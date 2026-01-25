@@ -7,6 +7,7 @@ import List from "@mui/joy/List";
 import ListItem from "@mui/joy/ListItem";
 import Typography from "@mui/joy/Typography";
 import ColorfulPopup from "./colourful_popup";
+import { HierarchyView, addHierarchyToURL } from "./hierarchy";
 import { API_URL } from "../api_url";
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -29,7 +30,8 @@ export type ColouringContext = {
 
 interface ColouringProps {
   colouringContext: ColouringContext;
-  setColouringContext: (prev: ColouringContext) => void;
+  setColouringContext: React.Dispatch<React.SetStateAction<ColouringContext>>;
+  hierarchyView: HierarchyView | null;
 }
 
 enum ColourPreset {
@@ -48,10 +50,11 @@ const VOLTAGE_COLOUR_PRESET: Record<number, string> = {
 export function Colouring({
   colouringContext,
   setColouringContext,
+  hierarchyView,
 }: ColouringProps) {
   const [columnNames, setColumnNames] = React.useState<string[]>([]);
   const [selectedValue, setSelectedValue] = React.useState<string>(
-    colouringContext.category
+    colouringContext.category,
   );
   const [categoryValues, setCategoryValues] = React.useState<
     (string | number)[]
@@ -115,6 +118,53 @@ export function Colouring({
     );
   }, [categoryValues, colouringContext]);
 
+  useEffect(() => {
+    if (!selectedValue) return;
+
+    const url = addHierarchyToURL(
+      hierarchyView,
+      `${API_URL}column_unique_values?column=${selectedValue}`,
+    );
+
+    fetch(url)
+      .then((response) => response.json())
+      .then((data) => {
+        setCategoryValues(data.slice(0, 50));
+
+        const newCategoryColours: Record<string | number, string> = {};
+
+        let colour_preset: ColourPreset = ColourPreset.OTHER;
+        if (selectedValue.includes("voltage")) {
+          colour_preset = ColourPreset.VOLTAGE;
+        }
+
+        const differences = 5;
+
+        for (let i = 0; i < data.length; i++) {
+          if (
+            colour_preset === ColourPreset.VOLTAGE &&
+            data[i] in VOLTAGE_COLOUR_PRESET
+          ) {
+            newCategoryColours[data[i]] = VOLTAGE_COLOUR_PRESET[data[i]];
+            continue;
+          }
+
+          let percent = i / data.length;
+          let angle = percent * 360;
+
+          let mod = i % differences;
+          angle = (angle + (360 / differences) * mod) % 360;
+
+          newCategoryColours[data[i]] = hslToHex(angle, 80, 50);
+        }
+
+        setColouringContext({
+          category: selectedValue,
+          mapping: newCategoryColours,
+        });
+      });
+  }, [selectedValue, hierarchyView]);
+
   return (
     <Box>
       <Select
@@ -129,42 +179,6 @@ export function Colouring({
             value={column}
             onClick={() => {
               setSelectedValue(column);
-              fetch(`${API_URL}column_unique_values?column=${column}`)
-                .then((response) => response.json())
-                .then((data) => {
-                  setCategoryValues(data.slice(0, 50));
-                  const newCategoryColours = {};
-
-                  let colour_preset: ColourPreset = ColourPreset.OTHER;
-                  if (column.includes("voltage")) {
-                    colour_preset = ColourPreset.VOLTAGE;
-                  }
-
-                  let differences = 5;
-
-                  for (let i = 0; i < data.length; i++) {
-                    if (colour_preset == ColourPreset.VOLTAGE) {
-                      if (data[i] in VOLTAGE_COLOUR_PRESET) {
-                        newCategoryColours[data[i]] =
-                          VOLTAGE_COLOUR_PRESET[data[i]];
-                        continue;
-                      }
-                    }
-
-                    let percent = i / data.length;
-                    let angle = percent * 360;
-
-                    let mod = i % differences;
-                    angle += (360 / differences) * mod;
-                    angle %= 360;
-                    let hexColor = hslToHex(angle, 80, 50);
-                    newCategoryColours[data[i]] = hexColor;
-                  }
-                  setColouringContext({
-                    category: column,
-                    mapping: newCategoryColours,
-                  });
-                });
             }}
           >
             {column}

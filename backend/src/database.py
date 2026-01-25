@@ -49,7 +49,6 @@ def connectivity_create_level_of_detail(
 
 
 def load_spatialite(connection: sqlite3.Connection) -> None:
-    print("Loading spatialite (sqlite3 extension)")
     if not hasattr(connection, "enable_load_extension"):
         print("""
         Python module `sqlite3` has not been compiled with `--enable-loadable-sqlite-extensions`

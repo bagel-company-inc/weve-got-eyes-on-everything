@@ -71,7 +71,7 @@ def get_geojson_from_bounds(
     table_name: str = level_of_detail_table(level_of_detail)
     cursor = connection.cursor()
 
-    bounds = bounds.overfit(percent_overfit=100)
+    bounds = bounds.overfit(percent_overfit=50)
 
     parameters: list[str | float] = [bounds.min_x, bounds.max_x, bounds.min_y, bounds.max_y]
 

@@ -7,9 +7,11 @@ import Input from "@mui/joy/Input";
 import IconButton from "@mui/joy/IconButton";
 import Add from "@mui/icons-material/Add";
 import Delete from "@mui/icons-material/Delete";
+import { HierarchyView, addHierarchyToURL } from "./hierarchy";
 import { API_URL } from "../api_url";
 
 interface ConnectivityProps {
+  hierarchyView: HierarchyView | null;
   pathFromNode?: string | null;
   setPathFromNode?: React.Dispatch<React.SetStateAction<string | null>>;
   pathToNode?: string | null;
@@ -25,6 +27,7 @@ interface ConnectivityProps {
 }
 
 export default function Connectivity({
+  hierarchyView,
   pathFromNode = null,
   setPathFromNode,
   pathToNode = null,
@@ -64,10 +67,12 @@ export default function Connectivity({
         return;
       }
       setFromLoading(true);
+      const url = addHierarchyToURL(
+        hierarchyView,
+        `${API_URL}search_complete?input=${encodeURIComponent(pathFromInputValue)}`,
+      );
       try {
-        const response = await fetch(
-          `${API_URL}search_complete?input=${encodeURIComponent(pathFromInputValue)}`,
-        );
+        const response = await fetch(url);
         const data = await response.json();
         setFromOptions(data.slice(0, 100));
       } catch (error) {
@@ -79,7 +84,7 @@ export default function Connectivity({
 
     const debounceTimeout = setTimeout(fetchSuggestions, 300);
     return () => clearTimeout(debounceTimeout);
-  }, [pathFromInputValue]);
+  }, [pathFromInputValue, hierarchyView]);
 
   // Fetch suggestions for "to" field
   React.useEffect(() => {
@@ -89,10 +94,12 @@ export default function Connectivity({
         return;
       }
       setToLoading(true);
+      const url = addHierarchyToURL(
+        hierarchyView,
+        `${API_URL}search_complete?input=${encodeURIComponent(pathToInputValue)}`,
+      );
       try {
-        const response = await fetch(
-          `${API_URL}search_complete?input=${encodeURIComponent(pathToInputValue)}`,
-        );
+        const response = await fetch(url);
         const data = await response.json();
         setToOptions(data.slice(0, 100));
       } catch (error) {
@@ -104,7 +111,7 @@ export default function Connectivity({
 
     const debounceTimeout = setTimeout(fetchSuggestions, 300);
     return () => clearTimeout(debounceTimeout);
-  }, [pathToInputValue]);
+  }, [pathToInputValue, hierarchyView]);
 
   if (!setPathFromNode || !setPathToNode) {
     return (
@@ -217,7 +224,7 @@ export default function Connectivity({
                       const currentEdges =
                         excludedEdges.length === 0 ? [""] : excludedEdges;
                       const newEdges = currentEdges.filter(
-                        (_, i) => i !== index
+                        (_, i) => i !== index,
                       );
                       setExcludedEdges(newEdges);
                     }
@@ -227,7 +234,7 @@ export default function Connectivity({
                 </IconButton>
               )}
             </Box>
-          )
+          ),
         )}
         <IconButton
           size="sm"

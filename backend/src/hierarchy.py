@@ -81,7 +81,7 @@ class HierarchyInput(NamedTuple):
             sql += " AND lv_circuit_code = ?"
             parameters.append(self.lv_circuit_code)
         if len(sql) == 0:
-            return "AND 1=1", []
+            return " AND 1=1", []
         return sql, parameters
 
 

@@ -15,6 +15,25 @@ export type HierarchyView = {
   dtx_code: string | null;
 };
 
+export function addHierarchyToURL(
+  hv: HierarchyView | null,
+  url: string,
+): string {
+  if (hv?.gxp_code) {
+    url += `&gxp=${hv.gxp_code}`;
+  }
+  if (hv?.substation_name) {
+    url += `&substation=${hv.substation_name}`;
+  }
+  if (hv?.hv_feeder_code) {
+    url += `&hv=${hv.hv_feeder_code}`;
+  }
+  if (hv?.dtx_code) {
+    url += `&dtx=${hv.dtx_code}`;
+  }
+  return url;
+}
+
 async function fetchValues(url: string): Promise<string[]> {
   const response = await fetch(url);
   if (!response.ok) {
@@ -178,7 +197,7 @@ function HierarchyNode({
                     <Typography level="body-md">{child}</Typography>
                   </ListItemButton>
                 </ListItem>
-              )
+              ),
             )}
         </List>
       )}
@@ -214,7 +233,7 @@ export default function Hierarchy({
     (hierarchy_view: HierarchyView | null) => {
       onSelectionChange?.(hierarchy_view);
     },
-    [onSelectionChange]
+    [onSelectionChange],
   );
 
   return (
@@ -268,7 +287,7 @@ export default function Hierarchy({
               }}
               fetchChildren={() =>
                 fetchValues(
-                  `${API_URL}hierarchy?gxp=${encodeURIComponent(gxp)}`
+                  `${API_URL}hierarchy?gxp=${encodeURIComponent(gxp)}`,
                 )
               }
               renderChild={(substation) => (
@@ -294,8 +313,8 @@ export default function Hierarchy({
                   fetchChildren={() =>
                     fetchValues(
                       `${API_URL}hierarchy?gxp=${encodeURIComponent(
-                        gxp
-                      )}&substation=${encodeURIComponent(substation)}`
+                        gxp,
+                      )}&substation=${encodeURIComponent(substation)}`,
                     )
                   }
                   renderChild={(hv_feeder) => (
@@ -321,10 +340,10 @@ export default function Hierarchy({
                       fetchChildren={() =>
                         fetchValues(
                           `${API_URL}hierarchy?gxp=${encodeURIComponent(
-                            gxp
+                            gxp,
                           )}&substation=${encodeURIComponent(
-                            substation
-                          )}&hv=${encodeURIComponent(hv_feeder)}`
+                            substation,
+                          )}&hv=${encodeURIComponent(hv_feeder)}`,
                         )
                       }
                       renderChild={(dtx) => (

@@ -40,7 +40,7 @@ def get_column_unique_values(
     SELECT
         DISTINCT {column}
     FROM {level_of_detail_table(LevelOfDetail.ALL)}
-    WHERE {where_statement.removeprefix("AND ")}
+    WHERE {where_statement.removeprefix(" AND ")}
     ORDER BY {column};
     """
 

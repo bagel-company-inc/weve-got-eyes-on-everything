@@ -12,6 +12,28 @@ class ConnectivityGraph(NamedTuple):
     edges_to_nodes: dict[str, tuple[str, str]]
 
 
+class GraphLoadingManager:
+    hierarchy: HierarchyInput | None
+    connectivity_graph: ConnectivityGraph | None
+
+    def __init__(self) -> None:
+        self.hierarchy = None
+        self.connectivity_graph = None
+
+    def get_connectivity_graph(
+        self, connection: sqlite3.Connection, hierarchy_input: HierarchyInput
+    ) -> ConnectivityGraph:
+        if hierarchy_input == self.hierarchy:
+            assert self.connectivity_graph is not None
+            return self.connectivity_graph
+
+        print("Creating new graph for new hierarchy")
+        new_connectivity_graph: ConnectivityGraph = connectivity_to_graph(
+            connection=connection, hierarchy_input=hierarchy_input
+        )
+        return new_connectivity_graph
+
+
 def connectivity_to_graph(
     connection: sqlite3.Connection, hierarchy_input: HierarchyInput | None = None
 ) -> ConnectivityGraph:
@@ -64,27 +86,38 @@ def connectivity_to_graph(
 
 
 def graph_shortest_path(
-    node_a: str, node_b: str, graph: ConnectivityGraph, edges_to_exclude: list[str]
+    graph_loading_manager: GraphLoadingManager,
+    connection: sqlite3.Connection,
+    hierarchy_input: HierarchyInput,
+    node_a: str,
+    node_b: str,
+    edges_to_exclude: list[str],
 ) -> list[str]:
-    if not graph.graph.has_node(node_a) or not graph.graph.has_node(node_b):
+    connectivity_graph: ConnectivityGraph = graph_loading_manager.get_connectivity_graph(
+        connection, hierarchy_input
+    )
+
+    if not connectivity_graph.graph.has_node(node_a) or not connectivity_graph.graph.has_node(
+        node_b
+    ):
         return []
 
     for edge in edges_to_exclude:
-        if edge not in graph.edges_to_nodes:
+        if edge not in connectivity_graph.edges_to_nodes:
             continue
-        a, b = graph.edges_to_nodes[edge]
-        if graph.graph.has_edge(a, b, edge):
-            graph.graph.remove_edge(a, b, edge)
+        a, b = connectivity_graph.edges_to_nodes[edge]
+        if connectivity_graph.graph.has_edge(a, b, edge):
+            connectivity_graph.graph.remove_edge(a, b, edge)
 
     def cleanup() -> None:
         for edge in edges_to_exclude:
-            if edge not in graph.edges_to_nodes:
+            if edge not in connectivity_graph.edges_to_nodes:
                 continue
-            a, b = graph.edges_to_nodes[edge]
-            graph.graph.add_edge(a, b, edge)
+            a, b = connectivity_graph.edges_to_nodes[edge]
+            connectivity_graph.graph.add_edge(a, b, edge)
 
     try:
-        node_path: list[str] = shortest_path(graph.graph, node_a, node_b)
+        node_path: list[str] = shortest_path(connectivity_graph.graph, node_a, node_b)
     except (NetworkXNoPath, NodeNotFound):
         cleanup()
         return []
@@ -94,7 +127,10 @@ def graph_shortest_path(
             continue
         previous_node: str = node_path[i - 1]
         edges: list[str] = list(
-            graph.graph.get_edge_data(current_node, previous_node).keys()  # type: ignore[arg-type]
+            connectivity_graph.graph.get_edge_data(  # type: ignore[arg-type]
+                current_node,
+                previous_node,
+            ).keys()
         )
         found_edge: str = edges[0]
         edge_path.append(found_edge)
@@ -104,30 +140,40 @@ def graph_shortest_path(
     return edge_path
 
 
-def graph_flood_fill(node: str, graph: ConnectivityGraph, edges_to_exclude: list[str]) -> list[str]:
-    if not graph.graph.has_node(node):
+def graph_flood_fill(
+    graph_loading_manager: GraphLoadingManager,
+    connection: sqlite3.Connection,
+    hierarchy_input: HierarchyInput,
+    node: str,
+    edges_to_exclude: list[str],
+) -> list[str]:
+    connectivity_graph: ConnectivityGraph = graph_loading_manager.get_connectivity_graph(
+        connection, hierarchy_input
+    )
+
+    if not connectivity_graph.graph.has_node(node):
         return []
 
     for edge in edges_to_exclude:
-        if edge not in graph.edges_to_nodes:
+        if edge not in connectivity_graph.edges_to_nodes:
             continue
-        a, b = graph.edges_to_nodes[edge]
-        if graph.graph.has_edge(a, b, edge):
-            graph.graph.remove_edge(a, b, edge)
+        a, b = connectivity_graph.edges_to_nodes[edge]
+        if connectivity_graph.graph.has_edge(a, b, edge):
+            connectivity_graph.graph.remove_edge(a, b, edge)
 
     def cleanup() -> None:
         for edge in edges_to_exclude:
-            if edge not in graph.edges_to_nodes:
+            if edge not in connectivity_graph.edges_to_nodes:
                 continue
-            a, b = graph.edges_to_nodes[edge]
-            graph.graph.add_edge(a, b, edge)
+            a, b = connectivity_graph.edges_to_nodes[edge]
+            connectivity_graph.graph.add_edge(a, b, edge)
 
     try:
         edge_path: list[str] = []
-        for node_a_b in dfs_edges(graph.graph, source=node, depth_limit=1000):
+        for node_a_b in dfs_edges(connectivity_graph.graph, source=node, depth_limit=1000):
             a, b = node_a_b
             edges: list[str] = list(
-                graph.graph.get_edge_data(a, b).keys()  # type: ignore[arg-type]
+                connectivity_graph.graph.get_edge_data(a, b).keys()  # type: ignore[arg-type]
             )
             found_edge: str = edges[0]
             edge_path.append(found_edge)

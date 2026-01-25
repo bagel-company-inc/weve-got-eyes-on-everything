@@ -8,3 +8,4 @@ types-geopandas
 types-Flask-Cors
 types-networkx
 types-PyYAML
+types-waitress
