@@ -91,6 +91,16 @@ interface CommonModelMapProps {
   pathEdges?: Set<string>;
   onObjectSelected?: () => void;
   onMapObjectClickClearPath?: () => void;
+  selectedAssets?: string[];
+  onAddToSelection?: (name: string) => void;
+  boxSelectionMode?: boolean;
+  onBoxSelection?: (names: string[]) => void;
+  onBoxSelectionComplete?: () => void;
+  highlightedAssetName?: string | null;
+  onAssetSelected?: (name: string) => void;
+  onBoundsChange?: (bounds: string) => void;
+  onClearAttributes?: () => void;
+  onClearSelection?: () => void;
 }
 
 type PropertiesType = {
@@ -112,6 +122,16 @@ export default function CommonModelMap({
   pathEdges = new Set(),
   onObjectSelected,
   onMapObjectClickClearPath,
+  selectedAssets = [],
+  onAddToSelection,
+  boxSelectionMode = false,
+  onBoxSelection,
+  onBoxSelectionComplete,
+  highlightedAssetName = null,
+  onAssetSelected,
+  onBoundsChange,
+  onClearAttributes,
+  onClearSelection,
 }: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [viewState, setViewState] = useState({
@@ -122,9 +142,27 @@ export default function CommonModelMap({
   const currentAbortController = useRef<AbortController | null>(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+
+  // Sync selectedId with highlightedAssetName when it changes externally
+  useEffect(() => {
+    if (highlightedAssetName === null) {
+      setSelectedId(null);
+    } else if (highlightedAssetName !== selectedId) {
+      setSelectedId(highlightedAssetName);
+    }
+  }, [highlightedAssetName, selectedId]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerSizeRef = useRef({ width: 0, height: 0 });
+  const [boxSelectionStart, setBoxSelectionStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [boxSelectionEnd, setBoxSelectionEnd] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const isDraggingBox = useRef(false);
 
   const selectObject = (name: string, vs: any) => {
     const size = containerSizeRef.current;
@@ -146,6 +184,9 @@ export default function CommonModelMap({
       .catch((err) => console.error("Error getting attributes:", err));
 
     setSelectedId(name);
+    if (onAssetSelected) {
+      onAssetSelected(name);
+    }
     if (onObjectSelected) {
       onObjectSelected();
     }
@@ -230,12 +271,33 @@ export default function CommonModelMap({
     setViewState(vs);
     throttledFetch(vs, hierarchyView);
     debouncedFetch(vs, hierarchyView);
+    
+    // Update bounds for attribute fetching
+    if (onBoundsChange) {
+      const size = containerSizeRef.current;
+      const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
+        vs,
+        size.width || window.innerWidth,
+        size.height || window.innerHeight,
+      );
+      onBoundsChange(`${minLng},${minLat},${maxLng},${maxLat}`);
+    }
   };
 
   // Initial fetch
   useEffect(() => {
     if (containerSize.width > 0 && containerSize.height > 0) {
       fetchVisibleData(viewState, hierarchyView);
+      
+      // Set initial bounds
+      if (onBoundsChange) {
+        const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
+          viewState,
+          containerSize.width || window.innerWidth,
+          containerSize.height || window.innerHeight,
+        );
+        onBoundsChange(`${minLng},${minLat},${maxLng},${maxLat}`);
+      }
     }
   }, [
     containerSize.width,
@@ -243,6 +305,7 @@ export default function CommonModelMap({
     colouringContext.category,
     colouringContext.mapping,
     hierarchyView,
+    onBoundsChange,
   ]);
 
   useEffect(() => {
@@ -284,8 +347,14 @@ export default function CommonModelMap({
         if (pathEdges.has(f.properties.name)) {
           return 4;
         }
-        if (f.properties.name === selectedId) {
+        if (
+          f.properties.name === selectedId ||
+          f.properties.name === highlightedAssetName
+        ) {
           return 5;
+        }
+        if (selectedAssets.includes(f.properties.name)) {
+          return 3;
         }
         if (
           f.properties.name === pathFromNode ||
@@ -299,7 +368,12 @@ export default function CommonModelMap({
       getLineColor: (f) => {
         // Highlight shortest path edges in a distinct color (bright cyan/magenta)
         if (pathEdges.has(f.properties.name)) return [255, 0, 255];
-        if (f.properties.name === selectedId) return [255, 30, 0];
+        if (
+          f.properties.name === selectedId ||
+          f.properties.name === highlightedAssetName
+        )
+          return [255, 30, 0];
+        if (selectedAssets.includes(f.properties.name)) return [255, 165, 0]; // Orange for selected assets
         if (f.properties.name === hoveredId) return [200, 200, 200];
         // Highlight path start/end nodes
         if (
@@ -322,11 +396,25 @@ export default function CommonModelMap({
         return f.properties.colour;
       },
 
-      onClick: (info) => {
+      onClick: (info, event) => {
+        // Don't handle clicks in box selection mode
+        if (boxSelectionMode) {
+          return;
+        }
         const name = info.object?.properties.name;
         if (name) {
+          // Regular click: just select the object (GIS-style single selection)
           onMapObjectClickClearPath?.();
           selectObject(name, viewState);
+        } else {
+          // Clicked on empty space - clear attributes and selection
+          setSelectedId(null);
+          if (onClearAttributes) {
+            onClearAttributes();
+          }
+          if (onClearSelection) {
+            onClearSelection();
+          }
         }
       },
       onHover: (info) => setHoveredId(info.object?.properties.name),
@@ -335,6 +423,8 @@ export default function CommonModelMap({
         onClick: [selectedId, viewState],
         getLineColor: [
           selectedId,
+          highlightedAssetName,
+          selectedAssets,
           hoveredId,
           pathFromNode,
           pathToNode,
@@ -344,6 +434,8 @@ export default function CommonModelMap({
         ],
         getLineWidth: [
           selectedId,
+          highlightedAssetName,
+          selectedAssets,
           pathFromNode,
           pathToNode,
           pathEdges,
@@ -361,6 +453,8 @@ export default function CommonModelMap({
   }, [
     geoJsonData,
     selectedId,
+    highlightedAssetName,
+    selectedAssets,
     hoveredId,
     pathFromNode,
     pathToNode,
@@ -372,6 +466,189 @@ export default function CommonModelMap({
 
   const layers = geojsonLayer ? [geojsonLayer] : [];
 
+  // Handle box selection
+  const handleBoxSelectionStart = useCallback(
+    (event: MouseEvent) => {
+      if (!boxSelectionMode) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        setBoxSelectionStart({ x, y });
+        setBoxSelectionEnd({ x, y });
+        isDraggingBox.current = true;
+      }
+    },
+    [boxSelectionMode],
+  );
+
+  const handleBoxSelectionMove = useCallback(
+    (event: MouseEvent) => {
+      if (!boxSelectionMode || !isDraggingBox.current || !boxSelectionStart)
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        setBoxSelectionEnd({ x, y });
+      }
+    },
+    [boxSelectionMode, boxSelectionStart],
+  );
+
+  const handleBoxSelectionEnd = useCallback(() => {
+    if (
+      !boxSelectionMode ||
+      !isDraggingBox.current ||
+      !boxSelectionStart ||
+      !boxSelectionEnd
+    ) {
+      isDraggingBox.current = false;
+      setBoxSelectionStart(null);
+      setBoxSelectionEnd(null);
+      return;
+    }
+
+    // Calculate bounding box in geographic coordinates
+    const viewport = new WebMercatorViewport({
+      ...viewState,
+      width: containerSizeRef.current.width || window.innerWidth,
+      height: containerSizeRef.current.height || window.innerHeight,
+    });
+
+    const minX = Math.min(boxSelectionStart.x, boxSelectionEnd.x);
+    const maxX = Math.max(boxSelectionStart.x, boxSelectionEnd.x);
+    const minY = Math.min(boxSelectionStart.y, boxSelectionEnd.y);
+    const maxY = Math.max(boxSelectionStart.y, boxSelectionEnd.y);
+
+    const topLeft = viewport.unproject([minX, minY]);
+    const bottomRight = viewport.unproject([maxX, maxY]);
+
+    const bbox = {
+      minLng: Math.min(topLeft[0], bottomRight[0]),
+      maxLng: Math.max(topLeft[0], bottomRight[0]),
+      minLat: Math.min(topLeft[1], bottomRight[1]),
+      maxLat: Math.max(topLeft[1], bottomRight[1]),
+    };
+
+    // Find all features within the bounding box
+    if (geoJsonData && geoJsonData.features) {
+      const selectedNames: string[] = [];
+      geoJsonData.features.forEach((feature: any) => {
+        if (feature.geometry && feature.properties?.name) {
+          const coords = feature.geometry.coordinates;
+          if (feature.geometry.type === "Point") {
+            const [lng, lat] = coords;
+            if (
+              lng >= bbox.minLng &&
+              lng <= bbox.maxLng &&
+              lat >= bbox.minLat &&
+              lat <= bbox.maxLat
+            ) {
+              selectedNames.push(feature.properties.name);
+            }
+          } else if (
+            feature.geometry.type === "LineString" ||
+            feature.geometry.type === "MultiLineString"
+          ) {
+            // Check if any point of the line is within the box
+            const points =
+              feature.geometry.type === "LineString" ? [coords] : coords;
+            for (const line of points) {
+              for (const [lng, lat] of line) {
+                if (
+                  lng >= bbox.minLng &&
+                  lng <= bbox.maxLng &&
+                  lat >= bbox.minLat &&
+                  lat <= bbox.maxLat
+                ) {
+                  selectedNames.push(feature.properties.name);
+                  break;
+                }
+              }
+              if (selectedNames.includes(feature.properties.name)) break;
+            }
+          }
+        }
+      });
+
+      if (selectedNames.length > 0 && onBoxSelection) {
+        onBoxSelection(selectedNames);
+      }
+    }
+
+    isDraggingBox.current = false;
+    setBoxSelectionStart(null);
+    setBoxSelectionEnd(null);
+
+    // Deactivate box selection mode after selection
+    if (onBoxSelectionComplete) {
+      onBoxSelectionComplete();
+    }
+  }, [
+    boxSelectionMode,
+    boxSelectionStart,
+    boxSelectionEnd,
+    viewState,
+    geoJsonData,
+    onBoxSelection,
+    onBoxSelectionComplete,
+  ]);
+
+  // Add event listeners for box selection
+  useEffect(() => {
+    if (!boxSelectionMode) {
+      setBoxSelectionStart(null);
+      setBoxSelectionEnd(null);
+      isDraggingBox.current = false;
+      return;
+    }
+
+    if (!boxSelectionMode) return;
+
+    const handleMouseDown = (e: MouseEvent) => handleBoxSelectionStart(e);
+    const handleMouseMove = (e: MouseEvent) => handleBoxSelectionMove(e);
+    const handleMouseUp = () => handleBoxSelectionEnd();
+    const handleMouseLeave = () => handleBoxSelectionEnd();
+
+    document.addEventListener("mousedown", handleMouseDown, true);
+    document.addEventListener("mousemove", handleMouseMove, true);
+    document.addEventListener("mouseup", handleMouseUp, true);
+    document.addEventListener("mouseleave", handleMouseLeave, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown, true);
+      document.removeEventListener("mousemove", handleMouseMove, true);
+      document.removeEventListener("mouseup", handleMouseUp, true);
+      document.removeEventListener("mouseleave", handleMouseLeave, true);
+    };
+  }, [
+    boxSelectionMode,
+    handleBoxSelectionStart,
+    handleBoxSelectionMove,
+    handleBoxSelectionEnd,
+  ]);
+
+  // Calculate selection rectangle style
+  const selectionRectStyle: React.CSSProperties | null =
+    boxSelectionStart && boxSelectionEnd
+      ? {
+          position: "absolute",
+          left: `${Math.min(boxSelectionStart.x, boxSelectionEnd.x)}px`,
+          top: `${Math.min(boxSelectionStart.y, boxSelectionEnd.y)}px`,
+          width: `${Math.abs(boxSelectionEnd.x - boxSelectionStart.x)}px`,
+          height: `${Math.abs(boxSelectionEnd.y - boxSelectionStart.y)}px`,
+          border: "2px dashed #1976d2",
+          backgroundColor: "rgba(25, 118, 210, 0.1)",
+          pointerEvents: "none",
+          zIndex: 1000,
+        }
+      : null;
+
   return (
     <div
       ref={containerRef}
@@ -379,15 +656,31 @@ export default function CommonModelMap({
         width: "100%",
         height: "100%",
         position: "relative",
+        cursor: boxSelectionMode ? "crosshair" : undefined,
       }}
     >
       <DeckGL
         viewState={viewState}
         onViewStateChange={handleViewChange}
-        controller={true}
+        controller={!boxSelectionMode}
         layers={layers}
         pickingRadius={10}
-        onClick={(info) => setSelectedId(info.object?.properties.name)}
+        onClick={(info) => {
+          if (!boxSelectionMode) {
+            if (info.object?.properties.name) {
+              setSelectedId(info.object.properties.name);
+            } else {
+              // Clicked on empty space - clear attributes and selection
+              setSelectedId(null);
+              if (onClearAttributes) {
+                onClearAttributes();
+              }
+              if (onClearSelection) {
+                onClearSelection();
+              }
+            }
+          }
+        }}
         widgets={[
           new FpsWidget({ style: widgetTheme, placement: "top-left" }),
           new ScaleWidget({ style: widgetTheme, placement: "bottom-right" }),
@@ -396,6 +689,7 @@ export default function CommonModelMap({
           new GeocoderWidget({ style: widgetTheme, placement: "bottom-left" }),
         ]}
         getCursor={(interactiveState) => {
+          if (boxSelectionMode) return "crosshair";
           if (interactiveState.isDragging) return "grabbing";
           if (interactiveState.isHovering) return "pointer";
           return "grab";
@@ -403,6 +697,7 @@ export default function CommonModelMap({
       >
         <Map reuseMaps mapStyle={MAP_STYLE} />
       </DeckGL>
+      {selectionRectStyle && <div style={selectionRectStyle} />}
     </div>
   );
 }

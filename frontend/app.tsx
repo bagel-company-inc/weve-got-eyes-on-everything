@@ -7,7 +7,7 @@ import Box from "@mui/joy/Box";
 import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
 import { ColouringContext } from "./components/colouring";
-import { HierarchyView, addHierarchyToURL } from "./components/hierarchy";
+import { HierarchyView } from "./components/hierarchy";
 import { API_URL } from "./api_url";
 
 export default function CommonModelViewer() {
@@ -15,6 +15,10 @@ export default function CommonModelViewer() {
     string,
     any
   > | null>(null);
+  const [selectedAssets, setSelectedAssets] = React.useState<string[]>([]);
+  const [viewedAssetName, setViewedAssetName] = React.useState<string | null>(null);
+  const [currentMapBounds, setCurrentMapBounds] = React.useState<string | null>(null);
+  const [boxSelectionMode, setBoxSelectionMode] = React.useState(false);
   const [hierarchyView, setHierarchyView] =
     React.useState<HierarchyView | null>(null);
   const [searchBarSelectedName, setSearchBarSelectedName] = React.useState<
@@ -25,6 +29,8 @@ export default function CommonModelViewer() {
 
   const [colouringContext, setColouringContext] =
     React.useState<ColouringContext>({ category: "", mapping: {} });
+  const [activeTab, setActiveTab] = React.useState(0);
+
   const [pathFromNode, setPathFromNode] = React.useState<string | null>(null);
   const [pathToNode, setPathToNode] = React.useState<string | null>(null);
   const [pathFromInputValue, setPathFromInputValue] = React.useState("");
@@ -33,7 +39,17 @@ export default function CommonModelViewer() {
   const [pathEdges, setPathEdges] = React.useState<Set<string>>(new Set());
   const [pathNotFound, setPathNotFound] = React.useState(false);
   const [pathLoading, setPathLoading] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState(0);
+
+  const [floodFillNode, setFloodFillNode] = React.useState<string | null>(null);
+  const [floodFillInputValue, setFloodFillInputValue] = React.useState("");
+  const [floodFillExcludedEdges, setFloodFillExcludedEdges] = React.useState<
+    string[]
+  >([]);
+  const [floodFillEdges, setFloodFillEdges] = React.useState<Set<string>>(
+    new Set(),
+  );
+  const [floodFillNotFound, setFloodFillNotFound] = React.useState(false);
+  const [floodFillLoading, setFloodFillLoading] = React.useState(false);
 
   const clearShortestPath = React.useCallback(() => {
     setPathFromNode(null);
@@ -44,65 +60,32 @@ export default function CommonModelViewer() {
     // Don't clear input values - preserve user's typed text
   }, []);
 
-  // Fetch shortest path when both input fields have values
-  React.useEffect(() => {
-    // Reset state immediately when inputs change
-    setPathNotFound(false);
-    setPathLoading(false);
-    setPathEdges(new Set());
+  const clearFloodFill = React.useCallback(() => {
+    setFloodFillNode(null);
+    setFloodFillEdges(new Set());
+    setFloodFillNotFound(false);
+    setFloodFillLoading(false);
+    // Don't clear input values - preserve user's typed text
+  }, []);
 
-    if (
-      pathFromInputValue.trim() &&
-      pathToInputValue.trim() &&
-      pathFromInputValue.trim() !== pathToInputValue.trim()
-    ) {
-      setPathLoading(true);
-      setPathNotFound(false);
-      let url = addHierarchyToURL(
-        hierarchyView,
-        `${API_URL}shortest_path?a=${encodeURIComponent(pathFromInputValue.trim())}&b=${encodeURIComponent(pathToInputValue.trim())}`,
-      );
-      if (excludedEdges.length > 0) {
-        const excludedString = excludedEdges
-          .map((edge) => edge.trim())
-          .filter((edge) => edge.length > 0)
-          .join(",");
-        if (excludedString) {
-          url += `&exclude=${encodeURIComponent(excludedString)}`;
-        }
-      }
+  // Fetch attributes for a selected asset
+  const fetchAttributesForAsset = React.useCallback((name: string) => {
+    // Use current map bounds if available, otherwise fallback to default
+    const bbox = currentMapBounds || "166.0,-47.5,179.0,-34.0";
+    fetch(`${API_URL}attributes?name=${encodeURIComponent(name)}&bbox=${bbox}`)
+      .then((response) => response.json())
+      .then((data) => {
+        setAttributeData(data);
+      })
+      .catch((err) => console.error("Error getting attributes:", err));
+  }, [currentMapBounds]);
 
-      const abortController = new AbortController();
-
-      fetch(url, { signal: abortController.signal })
-        .then((response) => response.json())
-        .then((data: string[]) => {
-          // Only update state if this request hasn't been aborted
-          if (!abortController.signal.aborted) {
-            setPathEdges(new Set(data));
-            setPathNotFound(data.length === 0);
-            setPathLoading(false);
-          }
-        })
-        .catch((err) => {
-          // Ignore abort errors
-          if (err.name === "AbortError") {
-            return;
-          }
-          console.error("Error getting shortest path:", err);
-          if (!abortController.signal.aborted) {
-            setPathEdges(new Set());
-            setPathNotFound(false);
-            setPathLoading(false);
-          }
-        });
-
-      // Cleanup: abort the request if inputs change before it completes
-      return () => {
-        abortController.abort();
-      };
-    }
-  }, [pathFromInputValue, pathToInputValue, excludedEdges, hierarchyView]);
+  // Combine path edges and flood fill edges for the map
+  const allHighlightedEdges = React.useMemo(() => {
+    const combined = new Set(pathEdges);
+    floodFillEdges.forEach((edge) => combined.add(edge));
+    return combined;
+  }, [pathEdges, floodFillEdges]);
 
   const handleMouseDown = React.useCallback(() => {
     setIsResizing(true);
@@ -148,6 +131,13 @@ export default function CommonModelViewer() {
           attributeData={attributeData}
           searchBarSelectionChange={setSearchBarSelectedName}
           selectedName={searchBarSelectedName}
+          selectedAssets={selectedAssets}
+          setSelectedAssets={setSelectedAssets}
+          viewedAssetName={viewedAssetName}
+          setViewedAssetName={setViewedAssetName}
+          onFetchAttributes={fetchAttributesForAsset}
+          boxSelectionMode={boxSelectionMode}
+          setBoxSelectionMode={setBoxSelectionMode}
           hierarchyView={hierarchyView}
           setHierarchyView={setHierarchyView}
           width={sidebarWidth}
@@ -163,8 +153,20 @@ export default function CommonModelViewer() {
           setPathToInputValue={setPathToInputValue}
           excludedEdges={excludedEdges}
           setExcludedEdges={setExcludedEdges}
-          pathNotFound={pathNotFound}
-          pathLoading={pathLoading}
+          setPathEdges={setPathEdges}
+          setPathNotFound={setPathNotFound}
+          setPathLoading={setPathLoading}
+          floodFillNode={floodFillNode}
+          setFloodFillNode={setFloodFillNode}
+          floodFillInputValue={floodFillInputValue}
+          setFloodFillInputValue={setFloodFillInputValue}
+          floodFillExcludedEdges={floodFillExcludedEdges}
+          setFloodFillExcludedEdges={setFloodFillExcludedEdges}
+          setFloodFillEdges={setFloodFillEdges}
+          setFloodFillNotFound={setFloodFillNotFound}
+          setFloodFillLoading={setFloodFillLoading}
+          onClearShortestPath={clearShortestPath}
+          onClearFloodFill={clearFloodFill}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
         />
@@ -197,9 +199,37 @@ export default function CommonModelViewer() {
             colouringContext={colouringContext}
             pathFromNode={pathFromNode}
             pathToNode={pathToNode}
-            pathEdges={pathEdges}
+            pathEdges={allHighlightedEdges}
             onObjectSelected={() => setActiveTab(0)}
             onMapObjectClickClearPath={clearShortestPath}
+            selectedAssets={selectedAssets}
+            onAddToSelection={(name) => {
+              setSelectedAssets((prev) => {
+                if (prev.includes(name)) return prev;
+                return [...prev, name];
+              });
+            }}
+            boxSelectionMode={boxSelectionMode}
+            onBoxSelection={(names) => {
+              setSelectedAssets((prev) => {
+                const newSet = new Set(prev);
+                names.forEach((name) => newSet.add(name));
+                return Array.from(newSet);
+              });
+            }}
+            onBoxSelectionComplete={() => setBoxSelectionMode(false)}
+            highlightedAssetName={viewedAssetName}
+            onAssetSelected={(name) => {
+              setViewedAssetName(name);
+            }}
+            onBoundsChange={setCurrentMapBounds}
+            onClearAttributes={() => {
+              setViewedAssetName(null);
+              setAttributeData(null);
+            }}
+            onClearSelection={() => {
+              setViewedAssetName(null);
+            }}
           />
         </Box>
       </Box>
