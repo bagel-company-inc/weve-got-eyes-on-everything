@@ -35,7 +35,6 @@ def read_connectivity_graph(path: Path) -> ConnectivityGraph:
 def get_connectivity_graph(
     hierarchy_input: HierarchyInput, graph_path: Path
 ) -> ConnectivityGraph | None:
-    print(hierarchy_input, graph_path)
     if hierarchy_input.gxp_code is None:
         return None
 
