@@ -138,7 +138,7 @@ export function Colouring({
           colour_preset = ColourPreset.VOLTAGE;
         }
 
-        const differences = 5;
+        const differences = 12;
 
         for (let i = 0; i < data.length; i++) {
           if (
@@ -167,6 +167,7 @@ export function Colouring({
 
   return (
     <Box>
+      <Typography level="title-md">Colour By:</Typography>
       <Select
         color="neutral"
         placeholder="Choose one…"

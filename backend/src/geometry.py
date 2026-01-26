@@ -12,7 +12,7 @@ from src.hierarchy import HierarchyInput
 
 
 def level_of_detail_from_zoom(zoom_level: float) -> LevelOfDetail:
-    if zoom_level > 14:
+    if zoom_level > 15:
         return LevelOfDetail.ALL
     if zoom_level > 10:
         return LevelOfDetail.HV
