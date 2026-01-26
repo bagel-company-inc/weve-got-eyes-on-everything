@@ -271,7 +271,7 @@ export default function CommonModelMap({
     setViewState(vs);
     throttledFetch(vs, hierarchyView);
     debouncedFetch(vs, hierarchyView);
-    
+
     // Update bounds for attribute fetching
     if (onBoundsChange) {
       const size = containerSizeRef.current;
@@ -288,7 +288,7 @@ export default function CommonModelMap({
   useEffect(() => {
     if (containerSize.width > 0 && containerSize.height > 0) {
       fetchVisibleData(viewState, hierarchyView);
-      
+
       // Set initial bounds
       if (onBoundsChange) {
         const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
@@ -328,7 +328,7 @@ export default function CommonModelMap({
         setViewState(newViewState);
       })
       .catch((err) => console.error("Error getting centroid:", err));
-  }, [searchBarSelected, viewState]);
+  }, [searchBarSelected]);
 
   const geojsonLayer = useMemo(() => {
     if (!geoJsonData) return null;
