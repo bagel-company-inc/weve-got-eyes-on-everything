@@ -96,8 +96,8 @@ def get_search_results(
 def get_centroid_at_name(connection: sqlite3.Connection, name: str) -> tuple[float, float] | None:
     sql: str = f"""
     SELECT
-        X(ST_Centroid(geom)) AS centroid_x,
-        Y(ST_Centroid(geom)) AS centroid_y
+        X(ST_Centroid({GEOMETRY_FIELD_NAME})) AS centroid_x,
+        Y(ST_Centroid({GEOMETRY_FIELD_NAME})) AS centroid_y
     FROM {level_of_detail_table(LevelOfDetail.ALL)}
     WHERE name = ?;
     """
