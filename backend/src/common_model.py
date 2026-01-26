@@ -48,7 +48,7 @@ def get_latest_extract_id(connection: CNMConnection) -> int:
         joke
     FROM cm_elec_run
     WHERE status = 'SUCCESS'
-    ORDER BY extract_id;
+    ORDER BY extract_id DESC;
     """
     df: DataFrame = connection.read_sql(sql)
     extract_id: int = df["extract_id"].values[0]
