@@ -13,6 +13,7 @@ import SearchBar from "./search_bar";
 import Hierarchy from "./hierarchy";
 import { HierarchyView } from "./hierarchy";
 import Connectivity from "./connectivity";
+import LevelOfDetailSelector from "./level_of_detail_selector";
 
 interface SidebarProps {
   attributeData: Record<string, any> | null;
@@ -56,6 +57,8 @@ interface SidebarProps {
   onClearFloodFill?: () => void;
   activeTab?: number;
   setActiveTab?: React.Dispatch<React.SetStateAction<number>>;
+  levelOfDetail?: string | null;
+  setLevelOfDetail?: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export default function Sidebar({
@@ -100,6 +103,8 @@ export default function Sidebar({
   onClearFloodFill,
   activeTab = 0,
   setActiveTab,
+  levelOfDetail = null,
+  setLevelOfDetail,
 }: SidebarProps) {
   return (
     <Sheet
@@ -124,6 +129,10 @@ export default function Sidebar({
       <SearchBar
         onSelectionChange={searchBarSelectionChange}
         hierarchyView={hierarchyView}
+      />
+      <LevelOfDetailSelector
+        selectedDetail={levelOfDetail}
+        onDetailChange={setLevelOfDetail}
       />
       <Tabs
         value={activeTab}

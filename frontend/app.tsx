@@ -51,6 +51,8 @@ export default function CommonModelViewer() {
   const [floodFillNotFound, setFloodFillNotFound] = React.useState(false);
   const [floodFillLoading, setFloodFillLoading] = React.useState(false);
 
+  const [levelOfDetail, setLevelOfDetail] = React.useState<string | null>(null);
+
   const clearShortestPath = React.useCallback(() => {
     setPathFromNode(null);
     setPathToNode(null);
@@ -169,6 +171,8 @@ export default function CommonModelViewer() {
           onClearFloodFill={clearFloodFill}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          levelOfDetail={levelOfDetail}
+          setLevelOfDetail={setLevelOfDetail}
         />
         <Box
           onMouseDown={handleMouseDown}
@@ -230,6 +234,7 @@ export default function CommonModelViewer() {
             onClearSelection={() => {
               setViewedAssetName(null);
             }}
+            levelOfDetail={levelOfDetail}
           />
         </Box>
       </Box>

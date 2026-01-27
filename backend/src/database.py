@@ -1,7 +1,7 @@
 import sqlite3
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from geopandas import GeoDataFrame
 
@@ -19,6 +19,19 @@ class LevelOfDetail(Enum):
     GXP = auto()
     HV = auto()
     ALL = auto()
+
+    @classmethod
+    def parse_request_args(cls, args: Mapping[str, str]) -> "LevelOfDetail | None":
+        detail: str | None = args.get("detail")
+        if not detail:
+            return None
+        if detail == "GXP":
+            return LevelOfDetail.GXP
+        if detail == "HV":
+            return LevelOfDetail.HV
+        if detail == "ALL":
+            return LevelOfDetail.ALL
+        return None
 
 
 def level_of_detail_table(level_of_detail: LevelOfDetail) -> str:

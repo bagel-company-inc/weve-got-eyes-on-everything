@@ -15,7 +15,7 @@ from src.attributes import (
     get_search_results,
     get_centroid_at_name,
 )
-from src.database import create_connection
+from src.database import create_connection, LevelOfDetail
 from src.hierarchy import HierarchyInput, get_hierarchy_json
 
 from src.graph import graph_shortest_path, graph_flood_fill
@@ -117,6 +117,18 @@ def attributes() -> Response:
 
 
 @cross_origin(origins=["*"])
+@app.route("/api/detail_levels", methods=["GET", "OPTIONS"])
+def get_detail_levels() -> Response:
+    detail_levels: list[str] = []
+    for level_of_detail in LevelOfDetail:
+        detail_levels.append(level_of_detail.name)
+
+    json_bytes: bytes = msgspec.json.encode(detail_levels)
+    response = Response(json_bytes, status=200, mimetype="application/json")
+    return response
+
+
+@cross_origin(origins=["*"])
 @app.route("/api/geojson", methods=["GET", "OPTIONS"])
 def get_geojson() -> Response:
     bbox_param: str | None = request.args.get("bbox")
@@ -125,16 +137,17 @@ def get_geojson() -> Response:
 
     hierarchy_input: HierarchyInput = HierarchyInput.parse_request_args(request.args)
     bounds: Bounds = Bounds.parse(bbox_param)
-    zoom_level: float = float(request.args.get("zoom", "14"))
     column: str | None = request.args.get("column")
+
+    level_of_detail: LevelOfDetail | None = LevelOfDetail.parse_request_args(request.args)
 
     connection: sqlite3.Connection = get_db()
     geojson_dict: dict[str, Any] | None = get_geojson_from_bounds(
         connection=connection,
         bounds=bounds,
-        zoom_level=zoom_level,
         attribute_column=column,
         hierarchy_input=hierarchy_input,
+        level_of_detail=level_of_detail,
     )
 
     if geojson_dict is None:

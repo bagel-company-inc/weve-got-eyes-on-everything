@@ -101,6 +101,7 @@ interface CommonModelMapProps {
   onBoundsChange?: (bounds: string) => void;
   onClearAttributes?: () => void;
   onClearSelection?: () => void;
+  levelOfDetail?: string | null;
 }
 
 type PropertiesType = {
@@ -132,6 +133,7 @@ export default function CommonModelMap({
   onBoundsChange,
   onClearAttributes,
   onClearSelection,
+  levelOfDetail = null,
 }: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [viewState, setViewState] = useState({
@@ -242,6 +244,11 @@ export default function CommonModelMap({
       `${API_URL}geojson?bbox=${minLng},${minLat},${maxLng},${maxLat}&zoom=${zoomLevel}&column=${colouringContext.category}`,
     );
 
+    // Add level of detail parameter if specified
+    if (levelOfDetail) {
+      url += `&detail=${levelOfDetail}`;
+    }
+
     try {
       const res = await fetch(url, { signal: controller.signal });
       const data = await res.json();
@@ -259,12 +266,14 @@ export default function CommonModelMap({
   const throttledFetch = useCallback(throttle(fetchVisibleData, 2000), [
     colouringContext.category,
     colouringContext.mapping,
+    levelOfDetail,
   ]);
 
   // Debounced fetch for final "stop" fetch
   const debouncedFetch = useCallback(debounce(fetchVisibleData, 100), [
     colouringContext.category,
     colouringContext.mapping,
+    levelOfDetail,
   ]);
 
   const handleViewChange = ({ viewState: vs }: any) => {
@@ -306,6 +315,7 @@ export default function CommonModelMap({
     colouringContext.mapping,
     hierarchyView,
     onBoundsChange,
+    levelOfDetail,
   ]);
 
   useEffect(() => {

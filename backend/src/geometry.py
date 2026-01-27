@@ -72,11 +72,12 @@ def create_feature_dict(geometry_wkt: str, properties: dict[str, Any]) -> dict[s
 def get_geojson_from_bounds(
     connection: sqlite3.Connection,
     bounds: Bounds,
-    zoom_level: float,
     attribute_column: str | None,
     hierarchy_input: HierarchyInput,
+    level_of_detail: LevelOfDetail | None = None,
 ) -> dict[str, Any] | None:
-    level_of_detail: LevelOfDetail = get_level_of_detail(bounds)
+    if level_of_detail is None:
+        level_of_detail = get_level_of_detail(bounds)
     table_name: str = level_of_detail_table(level_of_detail)
     cursor = connection.cursor()
 
