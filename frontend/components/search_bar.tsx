@@ -14,6 +14,7 @@ export default function SearchBar({
 }: SearchBarProps) {
   const [options, setOptions] = useState([]);
   const [inputValue, setInputValue] = useState("");
+  const [value, setValue] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -47,13 +48,18 @@ export default function SearchBar({
     <Autocomplete
       options={options}
       loading={loading}
+      value={value}
       inputValue={inputValue}
       onInputChange={(_, newInputValue) => {
         setInputValue(newInputValue);
       }}
       onChange={(_, newValue) => {
         const selectedName = typeof newValue === "string" ? newValue : null;
-        onSelectionChange(selectedName);
+        setValue(null); // Clear the value immediately to allow re-selection
+        setInputValue(""); // Clear the input as well
+        if (onSelectionChange) {
+          onSelectionChange(selectedName);
+        }
       }}
       placeholder="Search..."
       size={"sm"}

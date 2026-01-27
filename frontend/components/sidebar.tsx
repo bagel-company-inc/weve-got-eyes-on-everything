@@ -183,6 +183,7 @@ export default function Sidebar({
           <Hierarchy
             onSelectionChange={setHierarchyView}
             selectedName={selectedName}
+            currentHierarchyView={hierarchyView}
           />
         </TabPanel>
         <TabPanel value={3}>

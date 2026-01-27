@@ -48,6 +48,7 @@ async function fetchValues(url: string): Promise<string[]> {
 interface HierarchyProps {
   onSelectionChange?: (hierarchy_view: HierarchyView | null) => void;
   selectedName?: string | null;
+  currentHierarchyView?: HierarchyView | null;
 }
 
 interface HierarchyNodeProps {
@@ -57,6 +58,7 @@ interface HierarchyNodeProps {
   renderChild?: (child: string) => React.ReactNode;
   onSelect?: (name: string) => void;
   selectedName?: string | null;
+  shouldExpand?: boolean;
 }
 
 function HierarchyNode({
@@ -66,6 +68,7 @@ function HierarchyNode({
   renderChild,
   onSelect,
   selectedName,
+  shouldExpand = false,
 }: HierarchyNodeProps) {
   const [expanded, setExpanded] = React.useState(false);
   const [children, setChildren] = React.useState<string[] | null>(null);
@@ -88,6 +91,14 @@ function HierarchyNode({
       setLoading(false);
     }
   }, [fetchChildren]);
+
+  // Auto-expand if shouldExpand is true
+  React.useEffect(() => {
+    if (shouldExpand && !expanded && children === null && !loading && fetchChildren) {
+      loadChildren();
+      setExpanded(true);
+    }
+  }, [shouldExpand, expanded, children, loading, fetchChildren, loadChildren]);
 
   const handleToggle = () => {
     if (!fetchChildren) return;
@@ -208,11 +219,27 @@ function HierarchyNode({
 export default function Hierarchy({
   onSelectionChange,
   selectedName,
+  currentHierarchyView = null,
 }: HierarchyProps) {
   const [gxps, setGxps] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = React.useState<string | null>(null);
+
+  // Determine the selected label from currentHierarchyView
+  const derivedSelectedLabel = React.useMemo(() => {
+    if (!currentHierarchyView) return null;
+    if (currentHierarchyView.dtx_code) return currentHierarchyView.dtx_code;
+    if (currentHierarchyView.hv_feeder_code) return currentHierarchyView.hv_feeder_code;
+    if (currentHierarchyView.substation_name) return currentHierarchyView.substation_name;
+    if (currentHierarchyView.gxp_code) return currentHierarchyView.gxp_code;
+    return null;
+  }, [currentHierarchyView]);
+
+  // Sync selectedLabel with the current hierarchy view
+  React.useEffect(() => {
+    setSelectedLabel(derivedSelectedLabel);
+  }, [derivedSelectedLabel]);
 
   React.useEffect(() => {
     const loadGxps = async () => {
@@ -271,6 +298,7 @@ export default function Hierarchy({
               label={gxp}
               levelLabel="GXP"
               selectedName={selectedLabel}
+              shouldExpand={currentHierarchyView?.gxp_code === gxp}
               onSelect={(name) => {
                 if (selectedLabel === name) {
                   setSelectedLabel(null);
@@ -296,6 +324,10 @@ export default function Hierarchy({
                   label={substation}
                   levelLabel="Substation"
                   selectedName={selectedLabel}
+                  shouldExpand={
+                    currentHierarchyView?.gxp_code === gxp &&
+                    currentHierarchyView?.substation_name === substation
+                  }
                   onSelect={(name) => {
                     if (selectedLabel === name) {
                       setSelectedLabel(null);
@@ -323,6 +355,11 @@ export default function Hierarchy({
                       label={hv_feeder}
                       levelLabel="HV Feeder"
                       selectedName={selectedLabel}
+                      shouldExpand={
+                        currentHierarchyView?.gxp_code === gxp &&
+                        currentHierarchyView?.substation_name === substation &&
+                        currentHierarchyView?.hv_feeder_code === hv_feeder
+                      }
                       onSelect={(name) => {
                         if (selectedLabel === name) {
                           setSelectedLabel(null);

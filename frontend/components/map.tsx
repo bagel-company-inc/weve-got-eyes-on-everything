@@ -85,6 +85,7 @@ interface CommonModelMapProps {
   onAttributeDataChange?: (data: Record<string, any> | null) => void;
   hierarchyView?: HierarchyView;
   searchBarSelected?: string | null;
+  searchTriggerCount?: number;
   colouringContext: ColouringContext;
   pathFromNode?: string | null;
   pathToNode?: string | null;
@@ -117,6 +118,7 @@ export default function CommonModelMap({
   onAttributeDataChange,
   hierarchyView,
   searchBarSelected,
+  searchTriggerCount = 0,
   colouringContext,
   pathFromNode = null,
   pathToNode = null,
@@ -338,7 +340,7 @@ export default function CommonModelMap({
         setViewState(newViewState);
       })
       .catch((err) => console.error("Error getting centroid:", err));
-  }, [searchBarSelected]);
+  }, [searchBarSelected, searchTriggerCount]);
 
   const geojsonLayer = useMemo(() => {
     if (!geoJsonData) return null;

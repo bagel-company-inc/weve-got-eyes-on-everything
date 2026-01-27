@@ -24,6 +24,7 @@ export default function CommonModelViewer() {
   const [searchBarSelectedName, setSearchBarSelectedName] = React.useState<
     string | null
   >(null);
+  const [searchTriggerCount, setSearchTriggerCount] = React.useState(0);
   const [sidebarWidth, setSidebarWidth] = React.useState(400);
   const [isResizing, setIsResizing] = React.useState(false);
 
@@ -131,7 +132,12 @@ export default function CommonModelViewer() {
       >
         <Sidebar
           attributeData={attributeData}
-          searchBarSelectionChange={setSearchBarSelectedName}
+          searchBarSelectionChange={(name) => {
+            setSearchBarSelectedName(name);
+            if (name) {
+              setSearchTriggerCount((prev) => prev + 1);
+            }
+          }}
           selectedName={searchBarSelectedName}
           selectedAssets={selectedAssets}
           setSelectedAssets={setSelectedAssets}
@@ -200,6 +206,7 @@ export default function CommonModelViewer() {
             onAttributeDataChange={setAttributeData}
             hierarchyView={hierarchyView}
             searchBarSelected={searchBarSelectedName}
+            searchTriggerCount={searchTriggerCount}
             colouringContext={colouringContext}
             pathFromNode={pathFromNode}
             pathToNode={pathToNode}
