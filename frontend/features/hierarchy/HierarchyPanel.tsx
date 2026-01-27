@@ -6,33 +6,8 @@ import ListItemButton from "@mui/joy/ListItemButton";
 import Typography from "@mui/joy/Typography";
 import CircularProgress from "@mui/joy/CircularProgress";
 import Stack from "@mui/joy/Stack";
-import { API_URL } from "../api_url";
-
-export type HierarchyView = {
-  gxp_code: string;
-  substation_name: string | null;
-  hv_feeder_code: string | null;
-  dtx_code: string | null;
-};
-
-export function addHierarchyToURL(
-  hv: HierarchyView | null,
-  url: string,
-): string {
-  if (hv?.gxp_code) {
-    url += `&gxp=${hv.gxp_code}`;
-  }
-  if (hv?.substation_name) {
-    url += `&substation=${hv.substation_name}`;
-  }
-  if (hv?.hv_feeder_code) {
-    url += `&hv=${hv.hv_feeder_code}`;
-  }
-  if (hv?.dtx_code) {
-    url += `&dtx=${hv.dtx_code}`;
-  }
-  return url;
-}
+import { API_URL } from "../../config/api";
+import { useHierarchy, HierarchyView } from "../../contexts/HierarchyContext";
 
 async function fetchValues(url: string): Promise<string[]> {
   const response = await fetch(url);
@@ -43,12 +18,6 @@ async function fetchValues(url: string): Promise<string[]> {
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.values)) return data.values;
   return [];
-}
-
-interface HierarchyProps {
-  onSelectionChange?: (hierarchy_view: HierarchyView | null) => void;
-  selectedName?: string | null;
-  currentHierarchyView?: HierarchyView | null;
 }
 
 interface HierarchyNodeProps {
@@ -216,25 +185,22 @@ function HierarchyNode({
   );
 }
 
-export default function Hierarchy({
-  onSelectionChange,
-  selectedName,
-  currentHierarchyView = null,
-}: HierarchyProps) {
+export default function HierarchyPanel() {
+  const { hierarchyView, setHierarchyView } = useHierarchy();
   const [gxps, setGxps] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = React.useState<string | null>(null);
 
-  // Determine the selected label from currentHierarchyView
+  // Determine the selected label from hierarchyView
   const derivedSelectedLabel = React.useMemo(() => {
-    if (!currentHierarchyView) return null;
-    if (currentHierarchyView.dtx_code) return currentHierarchyView.dtx_code;
-    if (currentHierarchyView.hv_feeder_code) return currentHierarchyView.hv_feeder_code;
-    if (currentHierarchyView.substation_name) return currentHierarchyView.substation_name;
-    if (currentHierarchyView.gxp_code) return currentHierarchyView.gxp_code;
+    if (!hierarchyView) return null;
+    if (hierarchyView.dtx_code) return hierarchyView.dtx_code;
+    if (hierarchyView.hv_feeder_code) return hierarchyView.hv_feeder_code;
+    if (hierarchyView.substation_name) return hierarchyView.substation_name;
+    if (hierarchyView.gxp_code) return hierarchyView.gxp_code;
     return null;
-  }, [currentHierarchyView]);
+  }, [hierarchyView]);
 
   // Sync selectedLabel with the current hierarchy view
   React.useEffect(() => {
@@ -258,9 +224,9 @@ export default function Hierarchy({
 
   const handleSelect = React.useCallback(
     (hierarchy_view: HierarchyView | null) => {
-      onSelectionChange?.(hierarchy_view);
+      setHierarchyView(hierarchy_view);
     },
-    [onSelectionChange],
+    [setHierarchyView],
   );
 
   return (
@@ -298,7 +264,7 @@ export default function Hierarchy({
               label={gxp}
               levelLabel="GXP"
               selectedName={selectedLabel}
-              shouldExpand={currentHierarchyView?.gxp_code === gxp}
+              shouldExpand={hierarchyView?.gxp_code === gxp}
               onSelect={(name) => {
                 if (selectedLabel === name) {
                   setSelectedLabel(null);
@@ -325,8 +291,8 @@ export default function Hierarchy({
                   levelLabel="Substation"
                   selectedName={selectedLabel}
                   shouldExpand={
-                    currentHierarchyView?.gxp_code === gxp &&
-                    currentHierarchyView?.substation_name === substation
+                    hierarchyView?.gxp_code === gxp &&
+                    hierarchyView?.substation_name === substation
                   }
                   onSelect={(name) => {
                     if (selectedLabel === name) {
@@ -356,9 +322,9 @@ export default function Hierarchy({
                       levelLabel="HV Feeder"
                       selectedName={selectedLabel}
                       shouldExpand={
-                        currentHierarchyView?.gxp_code === gxp &&
-                        currentHierarchyView?.substation_name === substation &&
-                        currentHierarchyView?.hv_feeder_code === hv_feeder
+                        hierarchyView?.gxp_code === gxp &&
+                        hierarchyView?.substation_name === substation &&
+                        hierarchyView?.hv_feeder_code === hv_feeder
                       }
                       onSelect={(name) => {
                         if (selectedLabel === name) {

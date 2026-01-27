@@ -3,12 +3,12 @@ import { HexColorPicker } from "react-colorful";
 import Box from "@mui/joy/Box";
 
 // Improved version of https://usehooks.com/useOnClickOutside/
-const useClickOutside = (ref, handler) => {
+const useClickOutside = (ref: React.RefObject<any>, handler: (event: any) => void) => {
   useEffect(() => {
     let startedInside = false;
     let startedWhenMounted = false;
 
-    const listener = (event) => {
+    const listener = (event: any) => {
       // Do nothing if `mousedown` or `touchstart` started inside ref element
       if (startedInside || !startedWhenMounted) return;
       // Do nothing if clicking ref's element or descendent elements
@@ -17,7 +17,7 @@ const useClickOutside = (ref, handler) => {
       handler(event);
     };
 
-    const validateEventStart = (event) => {
+    const validateEventStart = (event: any) => {
       startedWhenMounted = ref.current;
       startedInside = ref.current && ref.current.contains(event.target);
     };
@@ -34,8 +34,13 @@ const useClickOutside = (ref, handler) => {
   }, [ref, handler]);
 };
 
-const ColorfulPopup = ({ colour, onChange }) => {
-  const popover = useRef();
+interface ColorPickerProps {
+  colour: string;
+  onChange: (colour: string) => void;
+}
+
+export default function ColorPicker({ colour, onChange }: ColorPickerProps) {
+  const popover = useRef<HTMLDivElement>(null);
   const [isOpen, toggle] = useState(false);
 
   const close = useCallback(() => toggle(false), []);
@@ -51,6 +56,7 @@ const ColorfulPopup = ({ colour, onChange }) => {
           height: "28px",
           borderRadius: "8px",
           border: "1px solid #363535ff",
+          cursor: "pointer",
         }}
         onClick={() => toggle(true)}
       />
@@ -62,6 +68,4 @@ const ColorfulPopup = ({ colour, onChange }) => {
       )}
     </Box>
   );
-};
-
-export default ColorfulPopup;
+}

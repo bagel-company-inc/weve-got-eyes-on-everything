@@ -3,17 +3,11 @@ import Box from "@mui/joy/Box";
 import Button from "@mui/joy/Button";
 import ButtonGroup from "@mui/joy/ButtonGroup";
 import Typography from "@mui/joy/Typography";
-import { API_URL } from "../api_url";
+import { API_URL } from "../../config/api";
+import { useMap } from "../../contexts/MapContext";
 
-interface LevelOfDetailSelectorProps {
-  selectedDetail: string | null;
-  onDetailChange: (detail: string | null) => void;
-}
-
-export default function LevelOfDetailSelector({
-  selectedDetail,
-  onDetailChange,
-}: LevelOfDetailSelectorProps) {
+function LevelOfDetailSelector() {
+  const { levelOfDetail, setLevelOfDetail } = useMap();
   const [detailLevels, setDetailLevels] = React.useState<string[]>([]);
 
   React.useEffect(() => {
@@ -44,9 +38,9 @@ export default function LevelOfDetailSelector({
         {allOptions.map((option) => (
           <Button
             key={option}
-            variant={selectedDetail === (option === "Auto" ? null : option) ? "solid" : "outlined"}
-            color={selectedDetail === (option === "Auto" ? null : option) ? "primary" : "neutral"}
-            onClick={() => onDetailChange(option === "Auto" ? null : option)}
+            variant={levelOfDetail === (option === "Auto" ? null : option) ? "solid" : "outlined"}
+            color={levelOfDetail === (option === "Auto" ? null : option) ? "primary" : "neutral"}
+            onClick={() => setLevelOfDetail(option === "Auto" ? null : option)}
             sx={{ flex: 1, minWidth: "60px" }}
           >
             {option}
@@ -56,3 +50,6 @@ export default function LevelOfDetailSelector({
     </Box>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export default React.memo(LevelOfDetailSelector);

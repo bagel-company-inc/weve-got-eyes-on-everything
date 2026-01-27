@@ -8,76 +8,45 @@ import Table from "@mui/joy/Table";
 import Sheet from "@mui/joy/Sheet";
 import Button from "@mui/joy/Button";
 import IconButton from "@mui/joy/IconButton";
-import Delete from "@mui/icons-material/Delete";
 import Clear from "@mui/icons-material/Clear";
 import CropFree from "@mui/icons-material/CropFree";
-import { API_URL } from "../api_url";
+import { useSelection } from "../../contexts/SelectionContext";
 
-const defaultBbox = "166.0,-47.5,179.0,-34.0"; // New Zealand area
+export default function AttributePanel() {
+  const {
+    attributeData,
+    selectedAssets,
+    setSelectedAssets,
+    viewedAssetName,
+    setViewedAssetName,
+    fetchAttributesForAsset,
+    boxSelectionMode,
+    setBoxSelectionMode,
+    setSearchBarSelectedName,
+    triggerSearch,
+  } = useSelection();
 
-interface AttributeListProps {
-  attributeData: Record<string, any> | null;
-  selectedAssets?: string[];
-  setSelectedAssets?: React.Dispatch<React.SetStateAction<string[]>>;
-  viewedAssetName?: string | null;
-  setViewedAssetName?: React.Dispatch<React.SetStateAction<string | null>>;
-  onFetchAttributes?: (name: string) => void;
-  boxSelectionMode?: boolean;
-  setBoxSelectionMode?: React.Dispatch<React.SetStateAction<boolean>>;
-  onZoomToAsset?: (name: string) => void;
-}
-
-export default function AttributeList({
-  attributeData,
-  selectedAssets = [],
-  setSelectedAssets,
-  viewedAssetName,
-  setViewedAssetName,
-  onFetchAttributes,
-  boxSelectionMode = false,
-  setBoxSelectionMode,
-  onZoomToAsset,
-}: AttributeListProps) {
   const handleAssetClick = React.useCallback(
     (name: string) => {
-      if (setViewedAssetName) {
-        setViewedAssetName(name);
-      }
-      if (onFetchAttributes) {
-        onFetchAttributes(name);
-      } else {
-        // Fallback: fetch with a default large bbox (covers New Zealand area)
-        fetch(
-          `${API_URL}attributes?name=${encodeURIComponent(name)}&bbox=${defaultBbox}`,
-        )
-          .then((response) => response.json())
-          .then((data) => {
-            // This won't update attributeData without a callback
-            console.log("Fetched attributes:", data);
-          })
-          .catch((err) => console.error("Error getting attributes:", err));
-      }
+      setViewedAssetName(name);
+      fetchAttributesForAsset(name);
       // Zoom to the asset
-      if (onZoomToAsset) {
-        onZoomToAsset(name);
-      }
+      setSearchBarSelectedName(name);
+      triggerSearch();
     },
-    [setViewedAssetName, onFetchAttributes, onZoomToAsset],
+    [setViewedAssetName, fetchAttributesForAsset, setSearchBarSelectedName, triggerSearch],
   );
 
   const handleClearAll = React.useCallback(() => {
-    if (setSelectedAssets) {
-      setSelectedAssets([]);
-    }
-    // Don't clear viewedAssetName - keep the attribute list visible
+    setSelectedAssets([]);
   }, [setSelectedAssets]);
 
   return (
     <Box
       className="AttributeList"
-      sx={{ 
-        display: "flex", 
-        flexDirection: "column", 
+      sx={{
+        display: "flex",
+        flexDirection: "column",
         gap: 2,
         flex: 1,
         minHeight: 0,
@@ -103,7 +72,7 @@ export default function AttributeList({
           variant={boxSelectionMode ? "solid" : "outlined"}
           color={boxSelectionMode ? "primary" : "neutral"}
           startDecorator={<CropFree />}
-          onClick={() => setBoxSelectionMode?.(!boxSelectionMode)}
+          onClick={() => setBoxSelectionMode(!boxSelectionMode)}
         >
           {boxSelectionMode ? "Box Select (Active)" : "Box Select"}
         </Button>

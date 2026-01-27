@@ -19,9 +19,12 @@ import {
   _GeocoderWidget as GeocoderWidget,
 } from "@deck.gl/widgets";
 import "@deck.gl/widgets/stylesheet.css";
-import { ColouringContext } from "./colouring";
-import { HierarchyView, addHierarchyToURL } from "./hierarchy";
-import { API_URL } from "../api_url";
+import { useMap } from "../../contexts/MapContext";
+import { useSelection } from "../../contexts/SelectionContext";
+import { useColouring } from "../../contexts/ColouringContext";
+import { useHierarchy, addHierarchyToURL } from "../../contexts/HierarchyContext";
+import { useConnectivity } from "../../contexts/ConnectivityContext";
+import { API_URL } from "../../config/api";
 
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 const widgetTheme = prefersDarkScheme.matches
@@ -81,40 +84,6 @@ function getCurrentBounds(
   return [topLeft[0], bottomRight[1], bottomRight[0], topLeft[1]];
 }
 
-interface CommonModelMapProps {
-  onAttributeDataChange?: (data: Record<string, any> | null) => void;
-  hierarchyView?: HierarchyView;
-  searchBarSelected?: string | null;
-  searchTriggerCount?: number;
-  colouringContext: ColouringContext;
-  pathFromNode?: string | null;
-  pathToNode?: string | null;
-  pathEdges?: Set<string>;
-  onObjectSelected?: () => void;
-  onMapObjectClickClearPath?: () => void;
-  selectedAssets?: string[];
-  onAddToSelection?: (name: string) => void;
-  boxSelectionMode?: boolean;
-  onBoxSelection?: (names: string[]) => void;
-  onBoxSelectionComplete?: () => void;
-  highlightedAssetName?: string | null;
-  onAssetSelected?: (name: string) => void;
-  onBoundsChange?: (bounds: string) => void;
-  onClearAttributes?: () => void;
-  onClearSelection?: () => void;
-  levelOfDetail?: string | null;
-  initialViewState?: {
-    latitude: number;
-    longitude: number;
-    zoom: number;
-  };
-  onViewStateChange?: (viewState: {
-    latitude: number;
-    longitude: number;
-    zoom: number;
-  }) => void;
-}
-
 type PropertiesType = {
   name: string;
   colour: Color;
@@ -124,51 +93,52 @@ type PropertiesType = {
   dtx_code: string | null;
 };
 
-export default function CommonModelMap({
-  onAttributeDataChange,
-  hierarchyView,
-  searchBarSelected,
-  searchTriggerCount = 0,
-  colouringContext,
-  pathFromNode = null,
-  pathToNode = null,
-  pathEdges = new Set(),
-  onObjectSelected,
-  onMapObjectClickClearPath,
-  selectedAssets = [],
-  onAddToSelection,
-  boxSelectionMode = false,
-  onBoxSelection,
-  onBoxSelectionComplete,
-  highlightedAssetName = null,
-  onAssetSelected,
-  onBoundsChange,
-  onClearAttributes,
-  onClearSelection,
-  levelOfDetail = null,
-  initialViewState,
-  onViewStateChange,
-}: CommonModelMapProps) {
+export default function CommonModelMap() {
+  // Use contexts
+  const {
+    viewState: contextViewState,
+    setViewState: setContextViewState,
+    initialViewState,
+    setCurrentMapBounds,
+    levelOfDetail,
+  } = useMap();
+
+  const {
+    selectedAssets,
+    viewedAssetName,
+    setViewedAssetName,
+    boxSelectionMode,
+    setBoxSelectionMode,
+    searchBarSelectedName,
+    searchTriggerCount,
+    fetchAttributesForAsset,
+    clearSelection,
+    addMultipleToSelection,
+  } = useSelection();
+
+  const { colouringContext } = useColouring();
+  const { hierarchyView } = useHierarchy();
+  const {
+    pathFromNode,
+    pathToNode,
+    allHighlightedEdges,
+  } = useConnectivity();
+
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
-  const [viewState, setViewState] = useState(
-    initialViewState || {
-      latitude: -39.059,
-      longitude: 174.07,
-      zoom: 14,
-    }
-  );
+  const [viewState, setViewState] = useState(initialViewState);
   const currentAbortController = useRef<AbortController | null>(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
 
-  // Sync selectedId with highlightedAssetName when it changes externally
+  // Sync selectedId with viewedAssetName when it changes externally
   useEffect(() => {
-    if (highlightedAssetName === null) {
+    if (viewedAssetName === null) {
       setSelectedId(null);
-    } else if (highlightedAssetName !== selectedId) {
-      setSelectedId(highlightedAssetName);
+    } else if (viewedAssetName !== selectedId) {
+      setSelectedId(viewedAssetName);
     }
-  }, [highlightedAssetName, selectedId]);
+  }, [viewedAssetName, selectedId]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerSizeRef = useRef({ width: 0, height: 0 });
@@ -190,24 +160,9 @@ export default function CommonModelMap({
       size.height || window.innerHeight,
     );
     if (!name) return;
-    fetch(
-      `${API_URL}attributes?name=${name}&bbox=${minLng},${minLat},${maxLng},${maxLat}`,
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        if (onAttributeDataChange) {
-          onAttributeDataChange(data);
-        }
-      })
-      .catch((err) => console.error("Error getting attributes:", err));
-
+    fetchAttributesForAsset(name);
     setSelectedId(name);
-    if (onAssetSelected) {
-      onAssetSelected(name);
-    }
-    if (onObjectSelected) {
-      onObjectSelected();
-    }
+    setViewedAssetName(name);
   };
 
   // Update container size on mount and when container size changes
@@ -239,7 +194,7 @@ export default function CommonModelMap({
     };
   }, []);
 
-  async function fetchVisibleData(vs: any, hv: HierarchyView | null) {
+  async function fetchVisibleData(vs: any, hv: any) {
     const size = containerSizeRef.current;
     const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
       vs,
@@ -294,28 +249,18 @@ export default function CommonModelMap({
 
   const handleViewChange = ({ viewState: vs }: any) => {
     setViewState(vs);
+    setContextViewState(vs);
     throttledFetch(vs, hierarchyView);
     debouncedFetch(vs, hierarchyView);
 
     // Update bounds for attribute fetching
-    if (onBoundsChange) {
-      const size = containerSizeRef.current;
-      const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
-        vs,
-        size.width || window.innerWidth,
-        size.height || window.innerHeight,
-      );
-      onBoundsChange(`${minLng},${minLat},${maxLng},${maxLat}`);
-    }
-
-    // Notify parent of view state changes for URL updates
-    if (onViewStateChange) {
-      onViewStateChange({
-        latitude: vs.latitude,
-        longitude: vs.longitude,
-        zoom: vs.zoom,
-      });
-    }
+    const size = containerSizeRef.current;
+    const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
+      vs,
+      size.width || window.innerWidth,
+      size.height || window.innerHeight,
+    );
+    setCurrentMapBounds(`${minLng},${minLat},${maxLng},${maxLat}`);
   };
 
   // Initial fetch
@@ -324,14 +269,12 @@ export default function CommonModelMap({
       fetchVisibleData(viewState, hierarchyView);
 
       // Set initial bounds
-      if (onBoundsChange) {
-        const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
-          viewState,
-          containerSize.width || window.innerWidth,
-          containerSize.height || window.innerHeight,
-        );
-        onBoundsChange(`${minLng},${minLat},${maxLng},${maxLat}`);
-      }
+      const [minLng, minLat, maxLng, maxLat] = getCurrentBounds(
+        viewState,
+        containerSize.width || window.innerWidth,
+        containerSize.height || window.innerHeight,
+      );
+      setCurrentMapBounds(`${minLng},${minLat},${maxLng},${maxLat}`);
     }
   }, [
     containerSize.width,
@@ -339,14 +282,13 @@ export default function CommonModelMap({
     colouringContext.category,
     colouringContext.mapping,
     hierarchyView,
-    onBoundsChange,
     levelOfDetail,
   ]);
 
   useEffect(() => {
-    if (!searchBarSelected) return;
-    selectObject(searchBarSelected, viewState);
-    fetch(`${API_URL}centroid?name=${searchBarSelected}`)
+    if (!searchBarSelectedName) return;
+    selectObject(searchBarSelectedName, viewState);
+    fetch(`${API_URL}centroid?name=${searchBarSelectedName}`)
       .then((response) => response.json())
       .then((data) => {
         if (!data) return;
@@ -361,17 +303,14 @@ export default function CommonModelMap({
           transitionInterpolator: new FlyToInterpolator(),
         };
         setViewState(newViewState);
-        // Update parent with new view state
-        if (onViewStateChange) {
-          onViewStateChange({
-            latitude: lat,
-            longitude: lon,
-            zoom: 18,
-          });
-        }
+        setContextViewState({
+          latitude: lat,
+          longitude: lon,
+          zoom: 18,
+        });
       })
       .catch((err) => console.error("Error getting centroid:", err));
-  }, [searchBarSelected, searchTriggerCount, onViewStateChange]);
+  }, [searchBarSelectedName, searchTriggerCount]);
 
   const geojsonLayer = useMemo(() => {
     if (!geoJsonData) return null;
@@ -387,12 +326,12 @@ export default function CommonModelMap({
       lineJointRounded: true,
       lineWidthUnits: "pixels",
       getLineWidth: (f) => {
-        if (pathEdges.has(f.properties.name)) {
+        if (allHighlightedEdges.has(f.properties.name)) {
           return 4;
         }
         if (
           f.properties.name === selectedId ||
-          f.properties.name === highlightedAssetName
+          f.properties.name === viewedAssetName
         ) {
           return 5;
         }
@@ -410,10 +349,10 @@ export default function CommonModelMap({
 
       getLineColor: (f) => {
         // Highlight shortest path edges in a distinct color (bright cyan/magenta)
-        if (pathEdges.has(f.properties.name)) return [255, 0, 255];
+        if (allHighlightedEdges.has(f.properties.name)) return [255, 0, 255];
         if (
           f.properties.name === selectedId ||
-          f.properties.name === highlightedAssetName
+          f.properties.name === viewedAssetName
         )
           return [255, 30, 0];
         if (selectedAssets.includes(f.properties.name)) return [255, 165, 0]; // Orange for selected assets
@@ -447,17 +386,11 @@ export default function CommonModelMap({
         const name = info.object?.properties.name;
         if (name) {
           // Regular click: just select the object (GIS-style single selection)
-          onMapObjectClickClearPath?.();
           selectObject(name, viewState);
         } else {
           // Clicked on empty space - clear attributes and selection
           setSelectedId(null);
-          if (onClearAttributes) {
-            onClearAttributes();
-          }
-          if (onClearSelection) {
-            onClearSelection();
-          }
+          clearSelection();
         }
       },
       onHover: (info) => setHoveredId(info.object?.properties.name),
@@ -466,22 +399,22 @@ export default function CommonModelMap({
         onClick: [selectedId, viewState],
         getLineColor: [
           selectedId,
-          highlightedAssetName,
+          viewedAssetName,
           selectedAssets,
           hoveredId,
           pathFromNode,
           pathToNode,
-          pathEdges,
+          allHighlightedEdges,
           colouringContext.category,
           colouringContext.mapping,
         ],
         getLineWidth: [
           selectedId,
-          highlightedAssetName,
+          viewedAssetName,
           selectedAssets,
           pathFromNode,
           pathToNode,
-          pathEdges,
+          allHighlightedEdges,
           viewState.zoom,
         ],
         getPointRadius: [viewState.zoom],
@@ -496,12 +429,12 @@ export default function CommonModelMap({
   }, [
     geoJsonData,
     selectedId,
-    highlightedAssetName,
+    viewedAssetName,
     selectedAssets,
     hoveredId,
     pathFromNode,
     pathToNode,
-    pathEdges,
+    allHighlightedEdges,
     viewState.zoom,
     colouringContext.category,
     colouringContext.mapping,
@@ -619,8 +552,8 @@ export default function CommonModelMap({
         }
       });
 
-      if (selectedNames.length > 0 && onBoxSelection) {
-        onBoxSelection(selectedNames);
+      if (selectedNames.length > 0) {
+        addMultipleToSelection(selectedNames);
       }
     }
 
@@ -629,17 +562,15 @@ export default function CommonModelMap({
     setBoxSelectionEnd(null);
 
     // Deactivate box selection mode after selection
-    if (onBoxSelectionComplete) {
-      onBoxSelectionComplete();
-    }
+    setBoxSelectionMode(false);
   }, [
     boxSelectionMode,
     boxSelectionStart,
     boxSelectionEnd,
     viewState,
     geoJsonData,
-    onBoxSelection,
-    onBoxSelectionComplete,
+    addMultipleToSelection,
+    setBoxSelectionMode,
   ]);
 
   // Add event listeners for box selection
@@ -715,12 +646,7 @@ export default function CommonModelMap({
             } else {
               // Clicked on empty space - clear attributes and selection
               setSelectedId(null);
-              if (onClearAttributes) {
-                onClearAttributes();
-              }
-              if (onClearSelection) {
-                onClearSelection();
-              }
+              clearSelection();
             }
           }
         }}

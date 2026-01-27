@@ -6,54 +6,17 @@ import { useEffect, useMemo } from "react";
 import List from "@mui/joy/List";
 import ListItem from "@mui/joy/ListItem";
 import Typography from "@mui/joy/Typography";
-import ColorfulPopup from "./colourful_popup";
-import { HierarchyView, addHierarchyToURL } from "./hierarchy";
-import { API_URL } from "../api_url";
+import ColorPicker from "./ColorPicker";
+import { useHierarchy, addHierarchyToURL } from "../../contexts/HierarchyContext";
+import { useColouring } from "../../contexts/ColouringContext";
+import { useSelection } from "../../contexts/SelectionContext";
+import { API_URL } from "../../config/api";
 
-function hslToHex(h: number, s: number, l: number): string {
-  l /= 100;
-  const a = (s * Math.min(l, 1 - l)) / 100;
-  const f = (n) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color)
-      .toString(16)
-      .padStart(2, "0"); // convert to Hex and prefix "0" if needed
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
-}
+export default function ColouringPanel() {
+  const { hierarchyView } = useHierarchy();
+  const { colouringContext, setCategory, updateColor } = useColouring();
+  const { setSelectedAssets } = useSelection();
 
-export type ColouringContext = {
-  category: string;
-  mapping: Record<string | number, string>;
-};
-
-interface ColouringProps {
-  colouringContext: ColouringContext;
-  setColouringContext: React.Dispatch<React.SetStateAction<ColouringContext>>;
-  hierarchyView: HierarchyView | null;
-  onSelectAssetsByValue?: (assetNames: string[]) => void;
-}
-
-enum ColourPreset {
-  VOLTAGE,
-  OTHER,
-}
-
-const VOLTAGE_COLOUR_PRESET: Record<number, string> = {
-  415: "#6fdd50",
-  3300: "#8bb01c",
-  6600: "#edbd0e",
-  11000: "#e86033",
-  22000: "#0eaaed",
-};
-
-export function Colouring({
-  colouringContext,
-  setColouringContext,
-  hierarchyView,
-  onSelectAssetsByValue,
-}: ColouringProps) {
   const [columnNames, setColumnNames] = React.useState<string[]>([]);
   const [selectedValue, setSelectedValue] = React.useState<string>(
     colouringContext.category,
@@ -91,7 +54,7 @@ export function Colouring({
 
   const handleValueClick = React.useCallback(
     async (value: string | number) => {
-      if (!selectedValue || !onSelectAssetsByValue) return;
+      if (!selectedValue) return;
 
       try {
         const url = addHierarchyToURL(
@@ -100,15 +63,15 @@ export function Colouring({
         );
         const response = await fetch(url);
         const assetNames = await response.json();
-        
+
         if (assetNames && Array.isArray(assetNames)) {
-          onSelectAssetsByValue(assetNames);
+          setSelectedAssets(assetNames);
         }
       } catch (err) {
         console.error("Error fetching assets by attribute:", err);
       }
     },
-    [selectedValue, onSelectAssetsByValue, hierarchyView]
+    [selectedValue, hierarchyView, setSelectedAssets]
   );
 
   const categoryList = useMemo(() => {
@@ -127,23 +90,17 @@ export function Colouring({
             <ListItem
               sx={{
                 display: "grid",
-                gridTemplateColumns: "30px 1fr", // left/right column ratio
+                gridTemplateColumns: "30px 1fr",
                 alignItems: "left",
                 gap: 1,
                 px: 1,
                 py: 1,
               }}
             >
-              <ColorfulPopup
+              <ColorPicker
                 colour={colouringContext.mapping[category]}
                 onChange={(colour) => {
-                  setColouringContext({
-                    category: colouringContext.category,
-                    mapping: {
-                      ...colouringContext.mapping,
-                      [category]: colour,
-                    },
-                  });
+                  updateColor(category, colour);
                 }}
               />
               <Typography
@@ -166,7 +123,7 @@ export function Colouring({
         ))}
       </List>
     );
-  }, [categoryValues, colouringContext, handleValueClick]);
+  }, [categoryValues, colouringContext.mapping, handleValueClick, updateColor]);
 
   useEffect(() => {
     if (!selectedValue) return;
@@ -180,40 +137,9 @@ export function Colouring({
       .then((response) => response.json())
       .then((data) => {
         setCategoryValues(data.slice(0, 50));
-
-        const newCategoryColours: Record<string | number, string> = {};
-
-        let colour_preset: ColourPreset = ColourPreset.OTHER;
-        if (selectedValue.includes("voltage")) {
-          colour_preset = ColourPreset.VOLTAGE;
-        }
-
-        const differences = 12;
-
-        for (let i = 0; i < data.length; i++) {
-          if (
-            colour_preset === ColourPreset.VOLTAGE &&
-            data[i] in VOLTAGE_COLOUR_PRESET
-          ) {
-            newCategoryColours[data[i]] = VOLTAGE_COLOUR_PRESET[data[i]];
-            continue;
-          }
-
-          let percent = i / data.length;
-          let angle = percent * 360;
-
-          let mod = i % differences;
-          angle = (angle + (360 / differences) * mod) % 360;
-
-          newCategoryColours[data[i]] = hslToHex(angle, 80, 50);
-        }
-
-        setColouringContext({
-          category: selectedValue,
-          mapping: newCategoryColours,
-        });
+        setCategory(selectedValue);
       });
-  }, [selectedValue, hierarchyView]);
+  }, [selectedValue, hierarchyView, setCategory]);
 
   return (
     <Box>
@@ -225,7 +151,11 @@ export function Colouring({
         color="neutral"
         placeholder="Choose one…"
         value={selectedValue}
-        onChange={(event) => setSelectedValue(event.target.value)}
+        onChange={(event, newValue) => {
+          if (newValue) {
+            setSelectedValue(newValue);
+          }
+        }}
       >
         {columnNames.map((column) => (
           <Option

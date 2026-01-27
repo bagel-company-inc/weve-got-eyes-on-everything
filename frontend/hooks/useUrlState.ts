@@ -1,4 +1,6 @@
-import { HierarchyView } from "./components/hierarchy";
+import { useEffect } from "react";
+import { HierarchyView } from "../contexts/HierarchyContext";
+import { ViewState, DEFAULT_VIEW_STATE } from "../contexts/MapContext";
 
 export interface AppState {
   latitude: number;
@@ -11,9 +13,9 @@ export interface AppState {
 
 // Default values
 export const DEFAULT_STATE: AppState = {
-  latitude: -39.059,
-  longitude: 174.07,
-  zoom: 14,
+  latitude: DEFAULT_VIEW_STATE.latitude,
+  longitude: DEFAULT_VIEW_STATE.longitude,
+  zoom: DEFAULT_VIEW_STATE.zoom,
   hierarchyView: null,
   levelOfDetail: null,
   colouringCategory: "",
@@ -140,4 +142,26 @@ export function writeStateToURL(state: Partial<AppState>): void {
   // Update URL without reloading the page
   const newURL = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState({}, "", newURL);
+}
+
+/**
+ * Hook to sync a value to the URL with debouncing
+ */
+export function useUrlSync<T>(
+  value: T,
+  writeToUrl: (value: T) => void,
+  debounceMs: number = 0,
+) {
+  useEffect(() => {
+    if (debounceMs === 0) {
+      writeToUrl(value);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      writeToUrl(value);
+    }, debounceMs);
+
+    return () => clearTimeout(timeoutId);
+  }, [value, writeToUrl, debounceMs]);
 }

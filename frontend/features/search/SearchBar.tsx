@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from "react";
 import Autocomplete from "@mui/joy/Autocomplete";
-import { API_URL } from "../api_url";
-import { HierarchyView, addHierarchyToURL } from "./hierarchy";
+import { API_URL } from "../../config/api";
+import { useHierarchy, addHierarchyToURL } from "../../contexts/HierarchyContext";
+import { useSelection } from "../../contexts/SelectionContext";
 
-interface SearchBarProps {
-  onSelectionChange?: (name: string | null) => void;
-  hierarchyView: HierarchyView | null;
-}
-
-export default function SearchBar({
-  onSelectionChange,
-  hierarchyView,
-}: SearchBarProps) {
+function SearchBar() {
+  const { hierarchyView } = useHierarchy();
+  const { setSearchBarSelectedName, triggerSearch } = useSelection();
   const [options, setOptions] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [value, setValue] = useState<string | null>(null);
@@ -20,7 +15,6 @@ export default function SearchBar({
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (inputValue.length < 2) {
-        // Only fetch if input has at least 2 characters
         setOptions([]);
         return;
       }
@@ -40,7 +34,7 @@ export default function SearchBar({
       }
     };
 
-    const debounceTimeout = setTimeout(fetchSuggestions, 300); // Debounce API calls
+    const debounceTimeout = setTimeout(fetchSuggestions, 300);
     return () => clearTimeout(debounceTimeout);
   }, [inputValue, hierarchyView]);
 
@@ -55,10 +49,11 @@ export default function SearchBar({
       }}
       onChange={(_, newValue) => {
         const selectedName = typeof newValue === "string" ? newValue : null;
-        setValue(null); // Clear the value immediately to allow re-selection
-        setInputValue(""); // Clear the input as well
-        if (onSelectionChange) {
-          onSelectionChange(selectedName);
+        setValue(null);
+        setInputValue("");
+        if (selectedName) {
+          setSearchBarSelectedName(selectedName);
+          triggerSearch();
         }
       }}
       placeholder="Search..."
@@ -69,3 +64,6 @@ export default function SearchBar({
     />
   );
 }
+
+// Memoize to prevent unnecessary re-renders when contexts change
+export default React.memo(SearchBar);
