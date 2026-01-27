@@ -11,14 +11,6 @@ from src.database import (
 from src.hierarchy import HierarchyInput
 
 
-def level_of_detail_from_zoom(zoom_level: float) -> LevelOfDetail:
-    if zoom_level > 15:
-        return LevelOfDetail.ALL
-    if zoom_level > 10:
-        return LevelOfDetail.HV
-    return LevelOfDetail.GXP
-
-
 class Bounds(NamedTuple):
     min_x: float
     min_y: float
@@ -41,7 +33,24 @@ class Bounds(NamedTuple):
         )
 
 
-def create_geoemtry_dict(geometry_wkt: str) -> dict[str, Any]:
+def level_of_detail_from_zoom(zoom_level: float) -> LevelOfDetail:
+    if zoom_level > 15:
+        return LevelOfDetail.ALL
+    if zoom_level > 10:
+        return LevelOfDetail.HV
+    return LevelOfDetail.GXP
+
+
+def get_level_of_detail(bounds: Bounds) -> LevelOfDetail:
+    biggest_diff: float = max(bounds.max_x - bounds.min_x, bounds.max_y - bounds.min_y)
+    if biggest_diff <= 0.015:
+        return LevelOfDetail.ALL
+    if biggest_diff <= 0.06:
+        return LevelOfDetail.HV
+    return LevelOfDetail.GXP
+
+
+def create_geometry_dict(geometry_wkt: str) -> dict[str, Any]:
     if geometry_wkt[0] == "P":
         coord_string: str = geometry_wkt[len("POINT(") : len(geometry_wkt) - 1]  # noqa[E203]
         coords: list[float] = [float(c) for c in coord_string.split(" ")]
@@ -56,7 +65,7 @@ def create_geoemtry_dict(geometry_wkt: str) -> dict[str, Any]:
 
 
 def create_feature_dict(geometry_wkt: str, properties: dict[str, Any]) -> dict[str, Any]:
-    geometry_dict: dict[str, Any] = create_geoemtry_dict(geometry_wkt)
+    geometry_dict: dict[str, Any] = create_geometry_dict(geometry_wkt)
     return {"type": "Feature", "geometry": geometry_dict, "properties": properties}
 
 
@@ -67,7 +76,7 @@ def get_geojson_from_bounds(
     attribute_column: str | None,
     hierarchy_input: HierarchyInput,
 ) -> dict[str, Any] | None:
-    level_of_detail: LevelOfDetail = level_of_detail_from_zoom(zoom_level)
+    level_of_detail: LevelOfDetail = get_level_of_detail(bounds)
     table_name: str = level_of_detail_table(level_of_detail)
     cursor = connection.cursor()
 
