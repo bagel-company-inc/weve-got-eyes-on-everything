@@ -13,6 +13,8 @@ import Clear from "@mui/icons-material/Clear";
 import CropFree from "@mui/icons-material/CropFree";
 import { API_URL } from "../api_url";
 
+const defaultBbox = "166.0,-47.5,179.0,-34.0"; // New Zealand area
+
 interface AttributeListProps {
   attributeData: Record<string, any> | null;
   selectedAssets?: string[];
@@ -22,6 +24,7 @@ interface AttributeListProps {
   onFetchAttributes?: (name: string) => void;
   boxSelectionMode?: boolean;
   setBoxSelectionMode?: React.Dispatch<React.SetStateAction<boolean>>;
+  onZoomToAsset?: (name: string) => void;
 }
 
 export default function AttributeList({
@@ -33,6 +36,7 @@ export default function AttributeList({
   onFetchAttributes,
   boxSelectionMode = false,
   setBoxSelectionMode,
+  onZoomToAsset,
 }: AttributeListProps) {
   const handleAssetClick = React.useCallback(
     (name: string) => {
@@ -53,8 +57,12 @@ export default function AttributeList({
           })
           .catch((err) => console.error("Error getting attributes:", err));
       }
+      // Zoom to the asset
+      if (onZoomToAsset) {
+        onZoomToAsset(name);
+      }
     },
-    [setViewedAssetName, onFetchAttributes],
+    [setViewedAssetName, onFetchAttributes, onZoomToAsset],
   );
 
   const handleClearAll = React.useCallback(() => {

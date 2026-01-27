@@ -103,6 +103,16 @@ interface CommonModelMapProps {
   onClearAttributes?: () => void;
   onClearSelection?: () => void;
   levelOfDetail?: string | null;
+  initialViewState?: {
+    latitude: number;
+    longitude: number;
+    zoom: number;
+  };
+  onViewStateChange?: (viewState: {
+    latitude: number;
+    longitude: number;
+    zoom: number;
+  }) => void;
 }
 
 type PropertiesType = {
@@ -136,13 +146,17 @@ export default function CommonModelMap({
   onClearAttributes,
   onClearSelection,
   levelOfDetail = null,
+  initialViewState,
+  onViewStateChange,
 }: CommonModelMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
-  const [viewState, setViewState] = useState({
-    latitude: -39.059,
-    longitude: 174.07,
-    zoom: 14,
-  });
+  const [viewState, setViewState] = useState(
+    initialViewState || {
+      latitude: -39.059,
+      longitude: 174.07,
+      zoom: 14,
+    }
+  );
   const currentAbortController = useRef<AbortController | null>(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -293,6 +307,15 @@ export default function CommonModelMap({
       );
       onBoundsChange(`${minLng},${minLat},${maxLng},${maxLat}`);
     }
+
+    // Notify parent of view state changes for URL updates
+    if (onViewStateChange) {
+      onViewStateChange({
+        latitude: vs.latitude,
+        longitude: vs.longitude,
+        zoom: vs.zoom,
+      });
+    }
   };
 
   // Initial fetch
@@ -338,9 +361,17 @@ export default function CommonModelMap({
           transitionInterpolator: new FlyToInterpolator(),
         };
         setViewState(newViewState);
+        // Update parent with new view state
+        if (onViewStateChange) {
+          onViewStateChange({
+            latitude: lat,
+            longitude: lon,
+            zoom: 18,
+          });
+        }
       })
       .catch((err) => console.error("Error getting centroid:", err));
-  }, [searchBarSelected, searchTriggerCount]);
+  }, [searchBarSelected, searchTriggerCount, onViewStateChange]);
 
   const geojsonLayer = useMemo(() => {
     if (!geoJsonData) return null;

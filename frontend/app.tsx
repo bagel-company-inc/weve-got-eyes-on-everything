@@ -7,30 +7,64 @@ import Box from "@mui/joy/Box";
 import CommonModelMap from "./components/map";
 import Sidebar from "./components/sidebar";
 import { ColouringContext } from "./components/colouring";
-import { HierarchyView } from "./components/hierarchy";
+import { HierarchyView, addHierarchyToURL } from "./components/hierarchy";
 import { API_URL } from "./api_url";
+import { readStateFromURL, writeStateToURL, DEFAULT_STATE } from "./url_state";
 
 export default function CommonModelViewer() {
+  // Read initial state from URL
+  const urlState = React.useMemo(() => readStateFromURL(), []);
+
   const [attributeData, setAttributeData] = React.useState<Record<
     string,
     any
   > | null>(null);
   const [selectedAssets, setSelectedAssets] = React.useState<string[]>([]);
-  const [viewedAssetName, setViewedAssetName] = React.useState<string | null>(null);
-  const [currentMapBounds, setCurrentMapBounds] = React.useState<string | null>(null);
+  const [viewedAssetName, setViewedAssetName] = React.useState<string | null>(
+    null,
+  );
+  const [currentMapBounds, setCurrentMapBounds] = React.useState<string | null>(
+    null,
+  );
   const [boxSelectionMode, setBoxSelectionMode] = React.useState(false);
   const [hierarchyView, setHierarchyView] =
-    React.useState<HierarchyView | null>(null);
+    React.useState<HierarchyView | null>(urlState.hierarchyView ?? null);
   const [searchBarSelectedName, setSearchBarSelectedName] = React.useState<
     string | null
   >(null);
   const [searchTriggerCount, setSearchTriggerCount] = React.useState(0);
-  const [sidebarWidth, setSidebarWidth] = React.useState(400);
+  const [sidebarWidth, setSidebarWidth] = React.useState(520);
   const [isResizing, setIsResizing] = React.useState(false);
 
   const [colouringContext, setColouringContext] =
-    React.useState<ColouringContext>({ category: "", mapping: {} });
+    React.useState<ColouringContext>({
+      category: urlState.colouringCategory ?? "",
+      mapping: {},
+    });
   const [activeTab, setActiveTab] = React.useState(0);
+
+  // Voltage color preset (same as in colouring.tsx)
+  const VOLTAGE_COLOUR_PRESET: Record<number, string> = {
+    415: "#6fdd50",
+    3300: "#8bb01c",
+    6600: "#edbd0e",
+    11000: "#e86033",
+    22000: "#0eaaed",
+  };
+
+  // Helper function to convert HSL to Hex (same as in colouring.tsx)
+  const hslToHex = (h: number, s: number, l: number): string => {
+    l /= 100;
+    const a = (s * Math.min(l, 1 - l)) / 100;
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color)
+        .toString(16)
+        .padStart(2, "0");
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  };
 
   const [pathFromNode, setPathFromNode] = React.useState<string | null>(null);
   const [pathToNode, setPathToNode] = React.useState<string | null>(null);
@@ -52,7 +86,93 @@ export default function CommonModelViewer() {
   const [floodFillNotFound, setFloodFillNotFound] = React.useState(false);
   const [floodFillLoading, setFloodFillLoading] = React.useState(false);
 
-  const [levelOfDetail, setLevelOfDetail] = React.useState<string | null>(null);
+  const [levelOfDetail, setLevelOfDetail] = React.useState<string | null>(
+    urlState.levelOfDetail ?? null,
+  );
+
+  // Store initial view state from URL
+  const [initialViewState] = React.useState({
+    latitude: urlState.latitude ?? DEFAULT_STATE.latitude,
+    longitude: urlState.longitude ?? DEFAULT_STATE.longitude,
+    zoom: urlState.zoom ?? DEFAULT_STATE.zoom,
+  });
+
+  // Track current map view state for URL updates
+  const [currentMapViewState, setCurrentMapViewState] =
+    React.useState(initialViewState);
+
+  // Load color mapping when category is set from URL
+  React.useEffect(() => {
+    // Only load if we have a category but no mapping
+    if (
+      colouringContext.category &&
+      Object.keys(colouringContext.mapping).length === 0
+    ) {
+      const url = addHierarchyToURL(
+        hierarchyView,
+        `${API_URL}column_unique_values?column=${colouringContext.category}`,
+      );
+
+      fetch(url)
+        .then((response) => response.json())
+        .then((data) => {
+          if (!data || data.length === 0) return;
+
+          const newCategoryColours: Record<string | number, string> = {};
+          const isVoltage = colouringContext.category.includes("voltage");
+          const differences = 12;
+
+          for (let i = 0; i < data.length; i++) {
+            // Use voltage preset if applicable
+            if (isVoltage && data[i] in VOLTAGE_COLOUR_PRESET) {
+              newCategoryColours[data[i]] = VOLTAGE_COLOUR_PRESET[data[i]];
+              continue;
+            }
+
+            // Generate color based on position
+            let percent = i / data.length;
+            let angle = percent * 360;
+            let mod = i % differences;
+            angle = (angle + (360 / differences) * mod) % 360;
+            newCategoryColours[data[i]] = hslToHex(angle, 80, 50);
+          }
+
+          setColouringContext({
+            category: colouringContext.category,
+            mapping: newCategoryColours,
+          });
+        })
+        .catch((err) => console.error("Error loading color mapping:", err));
+    }
+  }, [colouringContext.category, hierarchyView]); // Run when category or hierarchy changes
+
+  // Sync hierarchy view to URL
+  React.useEffect(() => {
+    writeStateToURL({ hierarchyView });
+  }, [hierarchyView]);
+
+  // Sync level of detail to URL
+  React.useEffect(() => {
+    writeStateToURL({ levelOfDetail });
+  }, [levelOfDetail]);
+
+  // Sync colouring category to URL (not the full mapping)
+  React.useEffect(() => {
+    writeStateToURL({ colouringCategory: colouringContext.category });
+  }, [colouringContext.category]);
+
+  // Debounced sync of map view state to URL
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      writeStateToURL({
+        latitude: currentMapViewState.latitude,
+        longitude: currentMapViewState.longitude,
+        zoom: currentMapViewState.zoom,
+      });
+    }, 500); // Debounce by 500ms to avoid updating URL too frequently
+
+    return () => clearTimeout(timeoutId);
+  }, [currentMapViewState]);
 
   const clearShortestPath = React.useCallback(() => {
     setPathFromNode(null);
@@ -60,7 +180,9 @@ export default function CommonModelViewer() {
     setPathEdges(new Set());
     setPathNotFound(false);
     setPathLoading(false);
-    // Don't clear input values - preserve user's typed text
+    setPathFromInputValue("");
+    setPathToInputValue("");
+    setExcludedEdges([]);
   }, []);
 
   const clearFloodFill = React.useCallback(() => {
@@ -68,20 +190,39 @@ export default function CommonModelViewer() {
     setFloodFillEdges(new Set());
     setFloodFillNotFound(false);
     setFloodFillLoading(false);
-    // Don't clear input values - preserve user's typed text
+    setFloodFillInputValue("");
+    setFloodFillExcludedEdges([]);
+  }, []);
+
+  const handleSelectAssetsByValue = React.useCallback(
+    (assetNames: string[]) => {
+      setSelectedAssets(assetNames);
+      setActiveTab(0); // Switch to Attributes tab
+    },
+    [],
+  );
+
+  const handleZoomToAsset = React.useCallback((name: string) => {
+    setSearchBarSelectedName(name);
+    setSearchTriggerCount((prev) => prev + 1);
   }, []);
 
   // Fetch attributes for a selected asset
-  const fetchAttributesForAsset = React.useCallback((name: string) => {
-    // Use current map bounds if available, otherwise fallback to default
-    const bbox = currentMapBounds || "166.0,-47.5,179.0,-34.0";
-    fetch(`${API_URL}attributes?name=${encodeURIComponent(name)}&bbox=${bbox}`)
-      .then((response) => response.json())
-      .then((data) => {
-        setAttributeData(data);
-      })
-      .catch((err) => console.error("Error getting attributes:", err));
-  }, [currentMapBounds]);
+  const fetchAttributesForAsset = React.useCallback(
+    (name: string) => {
+      // Use current map bounds if available, otherwise fallback to default
+      const bbox = currentMapBounds || "166.0,-47.5,179.0,-34.0";
+      fetch(
+        `${API_URL}attributes?name=${encodeURIComponent(name)}&bbox=${bbox}`,
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          setAttributeData(data);
+        })
+        .catch((err) => console.error("Error getting attributes:", err));
+    },
+    [currentMapBounds],
+  );
 
   // Combine path edges and flood fill edges for the map
   const allHighlightedEdges = React.useMemo(() => {
@@ -179,6 +320,8 @@ export default function CommonModelViewer() {
           setActiveTab={setActiveTab}
           levelOfDetail={levelOfDetail}
           setLevelOfDetail={setLevelOfDetail}
+          onSelectAssetsByValue={handleSelectAssetsByValue}
+          onZoomToAsset={handleZoomToAsset}
         />
         <Box
           onMouseDown={handleMouseDown}
@@ -242,6 +385,8 @@ export default function CommonModelViewer() {
               setViewedAssetName(null);
             }}
             levelOfDetail={levelOfDetail}
+            initialViewState={initialViewState}
+            onViewStateChange={setCurrentMapViewState}
           />
         </Box>
       </Box>

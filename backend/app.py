@@ -9,6 +9,7 @@ from flask_cors import CORS, cross_origin
 from waitress import serve
 
 from src.attributes import (
+    get_all_names_with_attributes,
     get_column_names,
     get_column_unique_values,
     get_attributes,
@@ -113,6 +114,31 @@ def attributes() -> Response:
         return Response("[]", status=200, mimetype="application/json")
 
     json_bytes: bytes = msgspec.json.encode(attributes)
+    return Response(json_bytes, status=200, mimetype="application/json")
+
+
+@cross_origin(origins=["*"])
+@app.route("/api/all_with_attribute", methods=["GET", "OPTIONS"])
+def all_with_attribute() -> Response:
+    column_name: str | None = request.args.get("column")
+    if not column_name:
+        return Response("[]", status=200, mimetype="application/json")
+
+    value: str | None = request.args.get("value")
+    if not value:
+        return Response("[]", status=200, mimetype="application/json")
+
+    hierarchy_input: HierarchyInput = HierarchyInput.parse_request_args(request.args)
+
+    connection: sqlite3.Connection = get_db()
+    names: list[str] | None = get_all_names_with_attributes(
+        connection, column_name, value, hierarchy_input
+    )
+
+    if names is None:
+        return Response("[]", status=200, mimetype="application/json")
+
+    json_bytes: bytes = msgspec.json.encode(names)
     return Response(json_bytes, status=200, mimetype="application/json")
 
 

@@ -105,6 +105,7 @@ def get_centroid_at_name(connection: sqlite3.Connection, name: str) -> tuple[flo
     cursor = connection.cursor()
     cursor.execute(sql, [name])
     row: tuple[float, float] | None = cursor.fetchone()
+    cursor.close()
     return row
 
 
@@ -126,8 +127,35 @@ def get_attributes(
     cursor = connection.cursor()
     cursor.execute(sql, [bounds.min_x, bounds.max_x, bounds.min_y, bounds.max_y, name])
     row = cursor.fetchone()
+    cursor.close()
 
     if row is None:
         return None
 
     return dict(zip(CONNECTIVITY_COLUMNS.keys(), row))
+
+
+def get_all_names_with_attributes(
+    connection: sqlite3.Connection, column_name: str, value: Any, hierarchy_input: HierarchyInput
+) -> list[str] | None:
+    if column_name not in CONNECTIVITY_COLUMNS:
+        return None
+    parameters: list[Any] = [value]
+    where_statement, extra_parameters = hierarchy_input.create_sql_where_clause()
+    parameters.extend(extra_parameters)
+    table_name: str = level_of_detail_table(LevelOfDetail.ALL)
+    sql: str = f"""
+    SELECT
+        name
+    FROM {table_name}
+    WHERE {column_name} = ? {where_statement};
+    """
+    cursor = connection.cursor()
+    cursor.execute(sql, parameters)
+    names: list[str] = []
+    rows = cursor.fetchall()
+    for row in rows:
+        name: str = row[0]
+        names.append(name)
+    cursor.close()
+    return names

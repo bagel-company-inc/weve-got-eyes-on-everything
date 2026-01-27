@@ -59,6 +59,8 @@ interface SidebarProps {
   setActiveTab?: React.Dispatch<React.SetStateAction<number>>;
   levelOfDetail?: string | null;
   setLevelOfDetail?: React.Dispatch<React.SetStateAction<string | null>>;
+  onSelectAssetsByValue?: (assetNames: string[]) => void;
+  onZoomToAsset?: (name: string) => void;
 }
 
 export default function Sidebar({
@@ -105,6 +107,8 @@ export default function Sidebar({
   setActiveTab,
   levelOfDetail = null,
   setLevelOfDetail,
+  onSelectAssetsByValue,
+  onZoomToAsset,
 }: SidebarProps) {
   return (
     <Sheet
@@ -146,7 +150,7 @@ export default function Sidebar({
       >
         <TabList>
           <Tab>Attributes</Tab>
-          <Tab>Colouring</Tab>
+          <Tab>Filter & Color</Tab>
           <Tab>Hierarchy</Tab>
           <Tab>Connectivity</Tab>
         </TabList>
@@ -170,6 +174,7 @@ export default function Sidebar({
             onFetchAttributes={onFetchAttributes}
             boxSelectionMode={boxSelectionMode}
             setBoxSelectionMode={setBoxSelectionMode}
+            onZoomToAsset={onZoomToAsset}
           />
         </TabPanel>
         <TabPanel value={1}>
@@ -177,6 +182,7 @@ export default function Sidebar({
             colouringContext={colouringContext}
             setColouringContext={setColouringContext}
             hierarchyView={hierarchyView}
+            onSelectAssetsByValue={onSelectAssetsByValue}
           />
         </TabPanel>
         <TabPanel value={2}>

@@ -344,13 +344,13 @@ export default function Connectivity({
         }}
       >
         <Typography level="title-md">Shortest Path</Typography>
-        {onClearShortestPath && (pathFromNode || pathToNode) && (
+        {onClearShortestPath && (pathFromNode || pathToNode || pathFromInputValue || pathToInputValue || excludedEdges.length > 0) && (
           <IconButton
             size="sm"
             variant="plain"
             color="neutral"
             onClick={onClearShortestPath}
-            title="Clear path"
+            title="Clear shortest path"
           >
             <Clear />
           </IconButton>
@@ -512,7 +512,7 @@ export default function Connectivity({
           }}
         >
           <Typography level="title-md">Flood Fill</Typography>
-          {onClearFloodFill && floodFillNode && (
+          {onClearFloodFill && (floodFillNode || floodFillInputValue || floodFillExcludedEdges.length > 0) && (
             <IconButton
               size="sm"
               variant="plain"

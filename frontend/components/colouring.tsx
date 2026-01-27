@@ -32,6 +32,7 @@ interface ColouringProps {
   colouringContext: ColouringContext;
   setColouringContext: React.Dispatch<React.SetStateAction<ColouringContext>>;
   hierarchyView: HierarchyView | null;
+  onSelectAssetsByValue?: (assetNames: string[]) => void;
 }
 
 enum ColourPreset {
@@ -51,6 +52,7 @@ export function Colouring({
   colouringContext,
   setColouringContext,
   hierarchyView,
+  onSelectAssetsByValue,
 }: ColouringProps) {
   const [columnNames, setColumnNames] = React.useState<string[]>([]);
   const [selectedValue, setSelectedValue] = React.useState<string>(
@@ -66,9 +68,48 @@ export function Colouring({
       .then((data) => {
         if (!data) return;
         setColumnNames(data);
-        setSelectedValue(data[0]);
+        // Only set to first column if there's no category already selected
+        if (!colouringContext.category) {
+          setSelectedValue(data[0]);
+        }
       });
-  }, []);
+  }, [colouringContext.category]);
+
+  // Sync selectedValue with colouringContext.category when it changes externally
+  useEffect(() => {
+    if (colouringContext.category && colouringContext.category !== selectedValue) {
+      setSelectedValue(colouringContext.category);
+    }
+  }, [colouringContext.category]);
+
+  // Sync categoryValues with colouringContext.mapping when it changes
+  useEffect(() => {
+    if (Object.keys(colouringContext.mapping).length > 0) {
+      setCategoryValues(Object.keys(colouringContext.mapping));
+    }
+  }, [colouringContext.mapping]);
+
+  const handleValueClick = React.useCallback(
+    async (value: string | number) => {
+      if (!selectedValue || !onSelectAssetsByValue) return;
+
+      try {
+        const url = addHierarchyToURL(
+          hierarchyView,
+          `${API_URL}all_with_attribute?column=${encodeURIComponent(selectedValue)}&value=${encodeURIComponent(value)}`
+        );
+        const response = await fetch(url);
+        const assetNames = await response.json();
+        
+        if (assetNames && Array.isArray(assetNames)) {
+          onSelectAssetsByValue(assetNames);
+        }
+      } catch (err) {
+        console.error("Error fetching assets by attribute:", err);
+      }
+    },
+    [selectedValue, onSelectAssetsByValue, hierarchyView]
+  );
 
   const categoryList = useMemo(() => {
     return (
@@ -107,7 +148,16 @@ export function Colouring({
               />
               <Typography
                 level="title-sm"
-                sx={{ color: "text.primary", wordBreak: "break-word" }}
+                onClick={() => handleValueClick(category)}
+                sx={{
+                  color: "text.primary",
+                  wordBreak: "break-word",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "background.level1",
+                    borderRadius: "sm",
+                  },
+                }}
               >
                 {`${category}`}
               </Typography>
@@ -116,7 +166,7 @@ export function Colouring({
         ))}
       </List>
     );
-  }, [categoryValues, colouringContext]);
+  }, [categoryValues, colouringContext, handleValueClick]);
 
   useEffect(() => {
     if (!selectedValue) return;
@@ -167,7 +217,10 @@ export function Colouring({
 
   return (
     <Box>
-      <Typography level="title-md">Colour By:</Typography>
+      <Typography level="title-md">Filter & Color By:</Typography>
+      <Typography level="body-sm" sx={{ color: "text.secondary", mb: 1 }}>
+        Select a column to color the map. Click on any value to filter assets.
+      </Typography>
       <Select
         color="neutral"
         placeholder="Choose one…"
