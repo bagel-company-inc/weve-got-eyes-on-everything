@@ -35,10 +35,10 @@ def read_connectivity_graph(path: Path) -> ConnectivityGraph:
 def get_connectivity_graph(
     hierarchy_input: HierarchyInput, graph_path: Path
 ) -> ConnectivityGraph | None:
-    if hierarchy_input.gxp_code is None:
+    if hierarchy_input.gxp_name is None:
         return None
 
-    return read_connectivity_graph(graph_path / hierarchy_input.gxp_code)
+    return read_connectivity_graph(graph_path / hierarchy_input.gxp_name)
 
 
 def connectivity_to_graph(

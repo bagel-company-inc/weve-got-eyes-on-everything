@@ -1,7 +1,7 @@
 import * as React from "react";
 
 export type HierarchyView = {
-  gxp_code: string;
+  gxp_name: string;
   substation_name: string | null;
   hv_feeder_code: string | null;
   dtx_code: string | null;
@@ -11,8 +11,8 @@ export function addHierarchyToURL(
   hv: HierarchyView | null,
   url: string,
 ): string {
-  if (hv?.gxp_code) {
-    url += `&gxp=${hv.gxp_code}`;
+  if (hv?.gxp_name) {
+    url += `&gxp=${hv.gxp_name}`;
   }
   if (hv?.substation_name) {
     url += `&substation=${hv.substation_name}`;
@@ -40,13 +40,12 @@ interface HierarchyProviderProps {
   initialHierarchyView?: HierarchyView | null;
 }
 
-export function HierarchyProvider({ 
-  children, 
-  initialHierarchyView = null 
+export function HierarchyProvider({
+  children,
+  initialHierarchyView = null,
 }: HierarchyProviderProps) {
-  const [hierarchyView, setHierarchyView] = React.useState<HierarchyView | null>(
-    initialHierarchyView
-  );
+  const [hierarchyView, setHierarchyView] =
+    React.useState<HierarchyView | null>(initialHierarchyView);
 
   const value = React.useMemo(
     () => ({

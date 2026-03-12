@@ -12,7 +12,7 @@ from src.hierarchy import HierarchyInput
 
 def create_graph_files(connection: sqlite3.Connection, path: Path) -> None:
     sql: str = f"""
-    SELECT DISTINCT gxp_code
+    SELECT DISTINCT gxp_name
     FROM {level_of_detail_table(LevelOfDetail.GXP)}
     """
     cursor: sqlite3.Cursor = connection.cursor()
@@ -21,12 +21,12 @@ def create_graph_files(connection: sqlite3.Connection, path: Path) -> None:
     cursor.close()
 
     for row in rows:
-        gxp_code: str = row[0]
-        print(f"Creating networkx graph for GXP `{gxp_code}`")
+        gxp_name: str = row[0]
+        print(f"Creating networkx graph for GXP `{gxp_name}`")
         connectivity_graph: ConnectivityGraph = connectivity_to_graph(
-            connection, HierarchyInput.new(gxp_code=gxp_code)
+            connection, HierarchyInput.new(gxp_name=gxp_name)
         )
-        graph_path: Path = path / gxp_code
+        graph_path: Path = path / gxp_name
         os.makedirs(graph_path, exist_ok=True)
         write_connectivity_graph(connectivity_graph, graph_path)
 

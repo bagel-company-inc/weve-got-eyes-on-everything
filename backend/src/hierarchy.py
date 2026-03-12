@@ -29,54 +29,54 @@ def hierarchy_display_name(hierarchy_level: HierarchyLevel) -> str:
 
 
 class HierarchyInput(NamedTuple):
-    gxp_code: str | None
+    gxp_name: str | None
     substation_name: str | None
     hv_feeder_code: str | None
-    dtx_code: str | None
+    dtx_name: str | None
     lv_circuit_code: str | None
 
     @classmethod
     def new(
         cls,
-        gxp_code: str | None = None,
+        gxp_name: str | None = None,
         substation_name: str | None = None,
         hv_feeder_code: str | None = None,
-        dtx_code: str | None = None,
+        dtx_name: str | None = None,
         lv_circuit_code: str | None = None,
     ) -> Self:
         return cls(
-            gxp_code=gxp_code,
+            gxp_name=gxp_name,
             substation_name=substation_name,
             hv_feeder_code=hv_feeder_code,
-            dtx_code=dtx_code,
+            dtx_name=dtx_name,
             lv_circuit_code=lv_circuit_code,
         )
 
     @classmethod
     def parse_request_args(cls, args: Mapping[str, str]) -> Self:
         return cls(
-            gxp_code=args.get("gxp"),
+            gxp_name=args.get("gxp"),
             substation_name=args.get("substation"),
             hv_feeder_code=args.get("hv"),
-            dtx_code=args.get("dtx"),
+            dtx_name=args.get("dtx"),
             lv_circuit_code=args.get("lv"),
         )
 
     def create_sql_where_clause(self) -> tuple[str, list[str]]:
         sql: str = ""
         parameters: list[str] = []
-        if self.gxp_code is not None:
-            sql += " AND gxp_code = ?"
-            parameters.append(self.gxp_code)
+        if self.gxp_name is not None:
+            sql += " AND gxp_name = ?"
+            parameters.append(self.gxp_name)
         if self.substation_name is not None:
             sql += " AND substation_name = ?"
             parameters.append(self.substation_name)
         if self.hv_feeder_code is not None:
             sql += " AND hv_feeder_code = ?"
             parameters.append(self.hv_feeder_code)
-        if self.dtx_code is not None:
-            sql += " AND dtx_code = ?"
-            parameters.append(self.dtx_code)
+        if self.dtx_name is not None:
+            sql += " AND dtx_name = ?"
+            parameters.append(self.dtx_name)
         if self.lv_circuit_code is not None:
             sql += " AND lv_circuit_code = ?"
             parameters.append(self.lv_circuit_code)
@@ -98,32 +98,32 @@ def get_hierarchy(
     parameters: list[str] = []
 
     additional_where_clause, extra_parameters = hierarchy_input.create_sql_where_clause()
-    column: str = "gxp_code"
+    column: str = "gxp_name"
 
     if (
-        hierarchy_input.gxp_code
+        hierarchy_input.gxp_name
         and hierarchy_input.substation_name
         and hierarchy_input.hv_feeder_code
-        and hierarchy_input.dtx_code
+        and hierarchy_input.dtx_name
     ):
         hierarchy_level = HierarchyLevel.LV
         column = "lv_circuit_code"
     elif (
-        hierarchy_input.gxp_code
+        hierarchy_input.gxp_name
         and hierarchy_input.substation_name
         and hierarchy_input.hv_feeder_code
     ):
         hierarchy_level = HierarchyLevel.DTX
-        column = "dtx_code"
-    elif hierarchy_input.gxp_code and hierarchy_input.substation_name:
+        column = "dtx_name"
+    elif hierarchy_input.gxp_name and hierarchy_input.substation_name:
         hierarchy_level = HierarchyLevel.HV
         column = "hv_feeder_code"
-    elif hierarchy_input.gxp_code:
+    elif hierarchy_input.gxp_name:
         hierarchy_level = HierarchyLevel.SUBSTATION
         column = "substation_name"
     else:
         hierarchy_level = HierarchyLevel.GXP
-        column = "gxp_code"
+        column = "gxp_name"
 
     parameters.extend(extra_parameters)
 

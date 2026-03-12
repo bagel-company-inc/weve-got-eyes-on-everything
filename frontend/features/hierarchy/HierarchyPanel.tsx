@@ -63,7 +63,13 @@ function HierarchyNode({
 
   // Auto-expand if shouldExpand is true
   React.useEffect(() => {
-    if (shouldExpand && !expanded && children === null && !loading && fetchChildren) {
+    if (
+      shouldExpand &&
+      !expanded &&
+      children === null &&
+      !loading &&
+      fetchChildren
+    ) {
       loadChildren();
       setExpanded(true);
     }
@@ -198,7 +204,7 @@ export default function HierarchyPanel() {
     if (hierarchyView.dtx_code) return hierarchyView.dtx_code;
     if (hierarchyView.hv_feeder_code) return hierarchyView.hv_feeder_code;
     if (hierarchyView.substation_name) return hierarchyView.substation_name;
-    if (hierarchyView.gxp_code) return hierarchyView.gxp_code;
+    if (hierarchyView.gxp_name) return hierarchyView.gxp_name;
     return null;
   }, [hierarchyView]);
 
@@ -264,7 +270,7 @@ export default function HierarchyPanel() {
               label={gxp}
               levelLabel="GXP"
               selectedName={selectedLabel}
-              shouldExpand={hierarchyView?.gxp_code === gxp}
+              shouldExpand={hierarchyView?.gxp_name === gxp}
               onSelect={(name) => {
                 if (selectedLabel === name) {
                   setSelectedLabel(null);
@@ -272,7 +278,7 @@ export default function HierarchyPanel() {
                 } else {
                   setSelectedLabel(name);
                   handleSelect({
-                    gxp_code: gxp,
+                    gxp_name: gxp,
                     substation_name: null,
                     hv_feeder_code: null,
                     dtx_code: null,
@@ -291,7 +297,7 @@ export default function HierarchyPanel() {
                   levelLabel="Substation"
                   selectedName={selectedLabel}
                   shouldExpand={
-                    hierarchyView?.gxp_code === gxp &&
+                    hierarchyView?.gxp_name === gxp &&
                     hierarchyView?.substation_name === substation
                   }
                   onSelect={(name) => {
@@ -301,7 +307,7 @@ export default function HierarchyPanel() {
                     } else {
                       setSelectedLabel(name);
                       handleSelect({
-                        gxp_code: gxp,
+                        gxp_name: gxp,
                         substation_name: substation,
                         hv_feeder_code: null,
                         dtx_code: null,
@@ -322,7 +328,7 @@ export default function HierarchyPanel() {
                       levelLabel="HV Feeder"
                       selectedName={selectedLabel}
                       shouldExpand={
-                        hierarchyView?.gxp_code === gxp &&
+                        hierarchyView?.gxp_name === gxp &&
                         hierarchyView?.substation_name === substation &&
                         hierarchyView?.hv_feeder_code === hv_feeder
                       }
@@ -333,7 +339,7 @@ export default function HierarchyPanel() {
                         } else {
                           setSelectedLabel(name);
                           handleSelect({
-                            gxp_code: gxp,
+                            gxp_name: gxp,
                             substation_name: substation,
                             hv_feeder_code: hv_feeder,
                             dtx_code: null,
@@ -362,7 +368,7 @@ export default function HierarchyPanel() {
                             } else {
                               setSelectedLabel(name);
                               handleSelect({
-                                gxp_code: gxp,
+                                gxp_name: gxp,
                                 substation_name: substation,
                                 hv_feeder_code: hv_feeder,
                                 dtx_code: dtx,

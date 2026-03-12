@@ -22,7 +22,10 @@ import "@deck.gl/widgets/stylesheet.css";
 import { useMap } from "../../contexts/MapContext";
 import { useSelection } from "../../contexts/SelectionContext";
 import { useColouring } from "../../contexts/ColouringContext";
-import { useHierarchy, addHierarchyToURL } from "../../contexts/HierarchyContext";
+import {
+  useHierarchy,
+  addHierarchyToURL,
+} from "../../contexts/HierarchyContext";
 import { useConnectivity } from "../../contexts/ConnectivityContext";
 import { API_URL } from "../../config/api";
 
@@ -87,7 +90,7 @@ function getCurrentBounds(
 type PropertiesType = {
   name: string;
   colour: Color;
-  gxp_code: string;
+  gxp_name: string;
   substation_name: string | null;
   hv_feeder_code: string | null;
   dtx_code: string | null;
@@ -118,11 +121,7 @@ export default function CommonModelMap() {
 
   const { colouringContext } = useColouring();
   const { hierarchyView } = useHierarchy();
-  const {
-    pathFromNode,
-    pathToNode,
-    allHighlightedEdges,
-  } = useConnectivity();
+  const { pathFromNode, pathToNode, allHighlightedEdges } = useConnectivity();
 
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [viewState, setViewState] = useState(initialViewState);

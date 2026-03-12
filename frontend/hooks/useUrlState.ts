@@ -52,7 +52,7 @@ export function readStateFromURL(): Partial<AppState> {
 
   if (gxp || substation || hv || dtx) {
     state.hierarchyView = {
-      gxp_code: gxp || "",
+      gxp_name: gxp || "",
       substation_name: substation || null,
       hv_feeder_code: hv || null,
       dtx_code: dtx || null,
@@ -98,8 +98,8 @@ export function writeStateToURL(state: Partial<AppState>): void {
       params.delete("hv");
       params.delete("dtx");
     } else {
-      if (state.hierarchyView.gxp_code) {
-        params.set("gxp", state.hierarchyView.gxp_code);
+      if (state.hierarchyView.gxp_name) {
+        params.set("gxp", state.hierarchyView.gxp_name);
       } else {
         params.delete("gxp");
       }
